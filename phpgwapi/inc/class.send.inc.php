@@ -14,7 +14,7 @@
 	use PHPMailer\PHPMailer\Exception;
 	/**
 	* SMTP mailer
-	* 
+	*
 	* @package phpgwapi
 	* @package communication
 	* This module should replace php's mail() function. It is fully syntax
@@ -48,9 +48,17 @@
 					$from = "NoReply<NoReply@{$GLOBALS['phpgw_info']['server']['hostname']}>";
 				}
 			}
+
+			$from = str_replace(array('[',']'),array('<','>'),$from);
+
 			if (!$sender)
 			{
-				if($GLOBALS['phpgw_info']['user']['fullname'])
+				$from_array = explode('<', $from);
+				if ( count($from_array) == 2 )
+				{
+					$sender = $from_array[0];
+				}
+				else if($GLOBALS['phpgw_info']['user']['fullname'])
 				{
 					$sender = $GLOBALS['phpgw_info']['user']['fullname'];
 				}
@@ -81,24 +89,19 @@
 		function send_email($to, $subject, $body, $msgtype, $cc, $bcc, $from, $sender, $content_type, $boundary,$attachments, $receive_notification)
 		{
 			$mail = createObject('phpgwapi.mailer_smtp');
-			$from = str_replace(array('[',']'),array('<','>'),$from);
 			$from_array = explode('<', $from);
 			unset($from);
 			if ( count($from_array) == 2 )
 			{
-				$mail->setFrom( trim( $from_array[1],'>' ), $from_array[0]);
-//				$mail->From = trim($from_array[1],'>');
-//				$mail->FromName = $from_array[0];
+				$mail->setFrom( trim( $from_array[1],'>' ), $sender);
 			}
 			else
 			{
 				$mail->setFrom($from_array[0], $sender );
-//				$mail->From = $from_array[0];
-//				$mail->FromName = $sender;
 			}
 			$delimiter = ';';
 			$to = explode($delimiter, $to);
-			
+
 			try
 			{
 				foreach ($to as $entry)
@@ -125,7 +128,7 @@
 			{
 				$delimiter = ';';
 				$cc = explode($delimiter, $cc);
-			
+
 				foreach ($cc as $entry)
 				{
 					$entry = str_replace(array('[',']'),array('<','>'),$entry);
@@ -144,7 +147,7 @@
 			{
 				$delimiter = ';';
 				$bcc = explode($delimiter, $bcc);
-			
+
 				foreach ($bcc as $entry)
 				{
 					$entry = str_replace(array('[',']'),array('<','>'),$entry);
@@ -161,11 +164,6 @@
 			}
 			$mail->IsSMTP();
 			$mail->Subject = $subject;
-			$mail->Body    = $body;
-			/**
-			 * Implement me...
-			 */
-//			$mail->AltBody = 'This is the body in plain text for non-HTML mail clients';
 
 			$mail->addCustomHeader('X-Mailer: fmsystem (http://www.fmsystem.no)');
 			if($receive_notification)
@@ -173,9 +171,13 @@
 				$mail->addCustomHeader("Disposition-Notification-To: {$mail->From}");
 			}
 
+			$mail->Body    = $body;
+
 			if($content_type =='html')
 			{
 				$mail->IsHTML(true);
+				$html2text		= createObject('phpgwapi.html2text', $body);
+				$mail->AltBody	= $html2text->getText();
 			}
 			else
 			{
@@ -247,7 +249,7 @@
 
 			return true;
 		}
-	
+
 			// ==================================================[ some sub-functions ]===
 
 		/**

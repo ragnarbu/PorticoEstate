@@ -251,16 +251,23 @@
 						'table' => 'phpgw_helpdesk_email_out_recipient_list',
 						'id' => array('name' => 'id', 'type' => 'auto'),
 						'fields' => array
-							(
+						(
 							array
-								(
+							(
+								'name' => 'alias',
+								'descr' => lang('alias'),
+								'type' => 'varchar',
+								'nullable' => false
+							),
+							array
+							(
 								'name' => 'name',
 								'descr' => lang('name'),
 								'type' => 'varchar',
 								'nullable' => false
 							),
 							array
-								(
+							(
 								'name' => 'email',
 								'descr' => lang('email'),
 								'type' => 'varchar',
@@ -278,6 +285,34 @@
 									'get_single_value' => 'helpdesk.sogeneric.get_name',
 									'method_input' => array('type' => 'email_recipient_set', 'selected' => '##set_id##')
 								)
+							),
+							array
+							(
+								'name' => 'office',
+								'descr' => lang('office'),
+								'type' => 'varchar',
+								'nullable' => false
+							),
+							array
+							(
+								'name' => 'department',
+								'descr' => lang('department'),
+								'type' => 'varchar',
+								'nullable' => true
+							),
+							array
+							(
+								'name' => 'alias_supervisor',
+								'descr' => lang('alias supervisor'),
+								'type' => 'varchar',
+								'nullable' => true
+							),
+							array
+							(
+								'name' => 'email_supervisor',
+								'descr' => lang('email supervisor'),
+								'type' => 'varchar',
+								'nullable' => true
 							),
 							array(
 								'name' => 'active',
@@ -393,6 +428,29 @@
 						'mapping' => array('name' => 'text')
 					);
 
+					break;
+				case 'external_com_type':
+					$_lang_external_com_type = lang('external communication type');
+					$info = array
+						(
+						'table' => 'phpgw_helpdesk_external_communication_type',
+						'id' => array('name' => 'id', 'type' => 'int'),
+						'fields' => array
+						(
+							array
+							(
+								'name' => 'name',
+								'descr' => lang('name'),
+								'type' => 'varchar'
+							),
+						),
+						'edit_msg' => lang('edit') . ' ' . $_lang_external_com_type,
+						'add_msg' => lang('add') . ' ' . $_lang_external_com_type,
+						'name' => $_lang_external_com_type,
+						'acl_app' => 'property',
+						'acl_location' => '.admin',
+						'menu_selection' => 'admin::helpdesk::external_com_type'
+					);
 					break;
 				default:
 					$message = lang('ERROR: illegal type %1', $type);

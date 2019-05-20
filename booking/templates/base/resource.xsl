@@ -181,10 +181,8 @@
 		var resource_id = <xsl:value-of select="resource/id"/>;
 		var lang = <xsl:value-of select="php:function('js_lang', 'Name', 'Category', 'Actions', 'Edit', 'Delete', 'Account', 'Role', 'No records found')"/>;
 
-    <![CDATA[
-        var documentsURL = 'index.php?menuaction=booking.uidocument_resource.index&sort=name&filter_owner_id=' + resource_id + '&phpgw_return_as=json&';
-        var permissionsURL = 'index.php?menuaction=booking.uipermission_resource.index&sort=name&filter_object_id=' + resource_id + '&phpgw_return_as=json&';
-        ]]>
+        var documentsURL = phpGWLink('/index.php', {menuaction:'booking.uidocument_resource.index', sort:'name', filter_owner_id:resource_id, length:-1}, true);
+        var permissionsURL = phpGWLink('/index.php', {menuaction: 'booking.uipermission_resource.index', sort:'name', filter_object_id :resource_id, length:-1}, true);
 
 		var colDefsDocuments = [
 		{key: 'name', label: lang['Name'], formatter: genericLink},
@@ -197,7 +195,7 @@
 		{key: 'actions', label: lang['Actions'], formatter: genericLink({name: 'edit', label:lang['Edit']}, {name: 'delete', label:lang['Delete']})}
 		];
 
-		createTable('documents_container',documentsURL,colDefsDocuments);
-		createTable('permissions_container',permissionsURL,colDefsPermissions);
+		createTable('documents_container',documentsURL,colDefsDocuments, '', 'pure-table pure-table-bordered');
+		createTable('permissions_container',permissionsURL,colDefsPermissions, '', 'pure-table pure-table-bordered');
 	</script>
 </xsl:template>

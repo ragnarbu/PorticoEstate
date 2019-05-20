@@ -22,8 +22,9 @@
 
 		public function show()
 		{
-			parent::show();
-			self::rich_text_editor('field-message');
+			phpgw::no_access();
+//			parent::show();
+//			self::rich_text_editor('field-message');
 		}
 
 		public function edit()
@@ -35,6 +36,13 @@
 			$system_message['building_name'] = phpgw::get_var('building_name', 'string');
 			$system_message['cancel_link'] = self::link(array('menuaction' => $this->module . '.uisearch.index'));
 			$system_message['created'] = $date->format('Y-m-d  H:m');
+
+			$building = CreateObject('booking.sobuilding')->read_single($system_message['building_id']);
+
+			if($building['deactivate_sendmessage'] == 1)
+			{
+				phpgw::no_access();
+			}
 
 			$errors = array();
 			if ($_SERVER['REQUEST_METHOD'] == 'POST')
@@ -71,5 +79,14 @@
 				'file'));
 
 			self::render_template_xsl('system_message', array('system_message' => $system_message));
+		}
+		public function index()
+		{
+			if (phpgw::get_var('phpgw_return_as') == 'json')
+			{
+				return $this->query();
+			}
+
+			phpgw::no_access();
 		}
 	}

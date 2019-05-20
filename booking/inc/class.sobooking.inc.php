@@ -86,7 +86,7 @@
 					'manytomany' => array(
 						'table' => 'bb_booking_cost',
 						'key' => 'booking_id',
-						'column' => array('time', 'author', 'comment', 'cost'),
+						'column' => array('time' => array('type' => 'timestamp', 'read_callback' => 'modify_by_timezone'), 'author', 'comment', 'cost'),
 						'order' => array('sort' => 'time', 'dir' => 'ASC')
 					)),
 				)
@@ -780,7 +780,7 @@
 			}
 			else
 			{
-				$end = $end->format('Y-m-d') . ' 24:00:00';
+				$end = $end->format('Y-m-d') . ' 23:59:59';
 			}
 
 			$building_id = intval($building_id);

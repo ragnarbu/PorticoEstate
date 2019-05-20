@@ -45,17 +45,19 @@
 				'download'			=> true,
 				'view_file'			=> true,
 				'edit_status'		=> true,
-				'edit_priority' => true,
+				'edit_priority'		=> true,
+				'take_over'			=> true,
 				'get_vendor_email'	=> true,
 				'_print'			=> true,
 				'columns'			=> true,
 				'update_data'		=> true,
 				'upload_clip'		=> true,
 				'view_image'		=> true,
-				'get_reverse_assignee'=>true,
+				'get_on_behalf_of'	=> true,
 				'handle_multi_upload_file' => true,
 				'build_multi_upload_file' => true,
-				'custom_ajax'			=> true
+				'custom_ajax'			=> true,
+				'get_user_list_ajax'	=> true
 			);
 
 		/**
@@ -66,11 +68,13 @@
 		protected $_show_finnish_date = false;
 		protected $_category_acl = false;
 		protected $lang_app_name;
+		protected $parent_category_name;
 		var $part_of_town_id;
 		var $status;
 		var $filter;
 		var $user_filter;
 		var $parent_cat_id;
+		var $group_id;
 
 		public function __construct()
 		{
@@ -104,6 +108,7 @@
 			$this->order				= $this->bo->order;
 			$this->status_id			= $this->bo->status_id;
 			$this->user_id				= $this->bo->user_id;
+			$this->group_id				= $this->bo->group_id;
 			$this->cat_id				= $this->bo->cat_id;
 			$this->parent_cat_id		= $this->bo->parent_cat_id;
 			$this->district_id			= $this->bo->district_id;
@@ -118,65 +123,10 @@
 				$GLOBALS['phpgw_info']['flags']['menu_selection'] = "helpdesk::helpdesk_$this->parent_cat_id";
 			}
 
-			$default_interface = isset($this->bo->config->config_data['tts_default_interface']) ? $this->bo->config->config_data['tts_default_interface'] : '';
+			$this->_simple = $this->bo->_simple;
+			$this->_group_candidates = $this->bo->_group_candidates;
+			$this->_show_finnish_date = $this->bo->_show_finnish_date;
 
-			/*
-			 * Inverted logic
-			 */
-			if($default_interface == 'simplified')
-			{
-				$this->_simple = true;
-			}
-
-			$user_groups =  $GLOBALS['phpgw']->accounts->membership($this->account);
-			$simple_group = isset($this->bo->config->config_data['fmttssimple_group']) ? $this->bo->config->config_data['fmttssimple_group'] : array();
-			foreach ($user_groups as $group => $dummy)
-			{
-				if (in_array($group, $simple_group))
-				{
-					if($default_interface == 'simplified')
-					{
-						$this->_simple = false;
-					}
-					else
-					{
-						$this->_simple = true;
-					}
-					break;
-				}
-			}
-			if (isset($this->bo->config->config_data['fmtts_assign_group_candidates']) && is_array($this->bo->config->config_data['fmtts_assign_group_candidates']))
-			{
-				foreach ($this->bo->config->config_data['fmtts_assign_group_candidates'] as $group_candidate)
-				{
-					if ($group_candidate)
-					{
-						$this->_group_candidates[] = $group_candidate;
-					}
-				}
-			}
-
-			reset($user_groups);
-
-			foreach ( $user_groups as $group => $dummy)
-			{
-				if ( in_array($group, $this->_group_candidates))
-				{
-					$this->_simple = false;
-					break;
-				}
-			}
-
-			reset($user_groups);
-			$group_finnish_date = isset($this->bo->config->config_data['fmtts_group_finnish_date']) ? $this->bo->config->config_data['fmtts_group_finnish_date'] : array();
-			foreach ( $user_groups as $group => $dummy)
-			{
-				if ( in_array($group, $group_finnish_date))
-				{
-					$this->_show_finnish_date = true;
-					break;
-				}
-			}
 
 			$this->_category_acl = isset($this->bo->config->config_data['acl_at_tts_category']) ? $this->bo->config->config_data['acl_at_tts_category'] : false;
 			if (!empty($this->bo->config->config_data['app_name']))
@@ -187,7 +137,34 @@
 			{
 				$this->lang_app_name = lang('helpdesk');
 			}
+
+			if($this->parent_cat_id)
+			{
+				$parent_category =  CreateObject('phpgwapi.categories', -1, 'helpdesk', '.ticket')->return_single($this->parent_cat_id);
+
+				if(!empty($parent_category[0]['name']))
+				{
+					$this->parent_category_name = $parent_category[0]['name'];
+					$this->lang_app_name .= ": {$this->parent_category_name}";
+
+				}
+			}
 		}
+
+
+		protected function save_sessiondata()
+		{
+			$user_id = phpgw::get_var('user_id', 'int');
+			$group_id = phpgw::get_var('group_id', 'int');
+
+			$data = array
+			(
+				'user_id'	=> $user_id,
+				'group_id'	=> $group_id
+			);
+			$this->bo->save_sessiondata($data);
+		}
+
 
 		/**
 		 * called as ajax from edit form
@@ -196,8 +173,18 @@
 		 *
 		 * @return array
 		 */
-		public function get_reverse_assignee()
+		public function get_on_behalf_of()
 		{
+			$custom_method = phpgw::get_var('custom_method', 'bool');
+			if($custom_method)
+			{
+				$result = $this->custom_ajax();
+				if($result)
+				{
+					return $result;
+				}
+			}
+
 			$query = phpgw::get_var('query');
 
 			$filter = array('active' => 1);
@@ -209,8 +196,8 @@
 			foreach ($account_list as $account)
 			{
 				$values[] = array(
-					'id' => $account->id,
-					'name' => $account->__toString()
+					'id' => $account->lid,
+					'name' => $account->lid . ' [' . $account->__toString() . ']'
 				);
 			}
 			return array('ResultSet' => array('Result' => $values));
@@ -235,6 +222,7 @@
 				'allrows' => phpgw::get_var('length', 'int') == -1 || $export,
 				'status_id' => $this->bo->status_id,
 				'user_id' => $this->bo->user_id,
+				'group_id' => $this->bo->group_id,
 				'reported_by' => $this->bo->reported_by,
 				'cat_id' => $this->bo->cat_id,
 				'vendor_id' => $this->bo->vendor_id,
@@ -263,7 +251,7 @@
 		public function query()
 		{
 			$params = $this->get_params();
-
+			$this->save_sessiondata();
 			$values = $this->bo->read($params);
 
 			if ($values)
@@ -490,6 +478,17 @@ HTML;
 			$this->bocommon->download($list,$name,$descr);
 		}
 
+		function take_over()
+		{
+			if(!$this->acl_edit)
+			{
+				return lang('sorry - insufficient rights');
+			}
+
+			$id 		= phpgw::get_var('id', 'int');
+			$receipt 	= $this->bo->take_over($id);
+			return lang('assignment has been changed for %1', $id);
+		}
 		function edit_status()
 		{
 			if(!$this->acl_edit)
@@ -751,6 +750,19 @@ HTML;
 			return $fields;
 		}
 
+		function get_user_list_ajax( )
+		{
+			if(!$this->acl_read)
+			{
+				return array();
+			}
+			$this->save_sessiondata();
+
+			$values = $this->_get_user_list($this->user_id, $this->group_id);
+
+			return $values;
+		}
+
 		private function _get_filters()
 		{
 			$values_combo_box = array();
@@ -768,7 +780,7 @@ HTML;
 
 			$combos[] = array('type' => 'filter',
 				'name' => 'status_id',
-				'extra' => $code,
+				'extra' => '',
 				'text' => lang('status'),
 				'list' => $values_combo_box[3]
 			);
@@ -801,9 +813,11 @@ HTML;
 
 				}
 
-				array_unshift($_categories, array('id' => '', 'name' => lang('no category')));
+//				array_unshift($_categories, array('id' => '', 'name' => lang('no category')));
 
-				$combos[] = array('type' => 'filter',
+				$combos[] = array(
+					'type' => 'filter',
+					'multiple'	=> true,
 					'name' => 'cat_id',
 					'extra' => '',
 					'text' => lang('category'),
@@ -812,14 +826,13 @@ HTML;
 
 				$filter_tts_assigned_to_me = $GLOBALS['phpgw_info']['user']['preferences']['helpdesk']['tts_assigned_to_me'];
 
-				$values_combo_box[4] = $this->_get_user_list($this->user_id);
+				$values_combo_box[4] = $this->_get_user_list($this->user_id, $this->group_id, $this->acl_location);
 
 				array_unshift($values_combo_box[4], array(
 					'id' => -1 * $GLOBALS['phpgw_info']['user']['account_id'],
 					'name' => lang('my assigned tickets'),
 					'selected'	=> ((int)$this->user_id < 0  || (int)$filter_tts_assigned_to_me == 1) ? 1 : 0));
 
-//				array_unshift($values_combo_box[4], array('id' => '', 'name' => lang('assigned to')));
 				$combos[] = array(
 					'type' => 'filter',
 					'multiple'	=> true,
@@ -829,12 +842,75 @@ HTML;
 					'list' => $values_combo_box[4]
 				);
 
+				$assigned_groups2 = $this->bo->get_assigned_groups2($this->group_id);
+				array_unshift($assigned_groups2, array('id' => '', 'name' => lang('group')));
+
+
+			$link = self::link(array(
+					'menuaction' => 'helpdesk.uitts.get_user_list_ajax',
+					'phpgw_return_as' => 'json'
+			));
+
+			$code = '
+				var link = "' . $link . '";
+				var data = {"group_id": $(this).val(),
+							user_id:$("#user_id").val()};
+				execute_ajax(link,
+					function(result){
+						var $el = $("#user_id");
+						$el.empty();
+						$.each(result, function(key, value) {
+							if(value.selected ==1)
+							{
+								var option = $("<option></option>").attr("value", value.id).text(value.name);
+								option.attr("selected", "selected");
+								$el.append(option);
+							}
+							else
+							{
+								  $el.append($("<option></option>").attr("value", value.id).text(value.name));
+							}
+						});
+						$("#user_id").multiselect("destroy");
+						$("#user_id").multiselect({
+							buttonWidth: 250,
+							includeSelectAllOption: true,
+							enableFiltering: true,
+							enableCaseInsensitiveFiltering: true,
+							onChange: function ($option)
+							{
+								// Check if the filter was used.
+								var query = $("#user_id").find("li.multiselect-filter input").val();
+								if (query)
+								{
+									$("#user_id").find("li.multiselect-filter input").val("").trigger("keydown");
+								}
+							}
+						});
+
+						$(".btn-group").addClass(\'w-100\');
+						$(".multiselect ").addClass(\'form-control\');
+						$(".multiselect").removeClass(\'btn\');
+						$(".multiselect").removeClass(\'btn-default\');
+
+					}, data, "GET", "json"
+				);
+				';
+
+				$combos[] = array('type' => 'filter',
+					'name' => 'group_id',
+					'extra' => $code,
+					'text' => lang('group'),
+					'list' => $assigned_groups2
+				);
+
 				$values_combo_box[5] = $this->bo->get_reported_by($this->reported_by);
 				array_unshift($values_combo_box[5], array('id' => $GLOBALS['phpgw_info']['user']['account_id'],
 					'name' => lang('my submitted tickets')));
-				array_unshift($values_combo_box[5], array('id' => '', 'name' => lang('reported by')));
+//				array_unshift($values_combo_box[5], array('id' => '', 'name' => lang('reported by')));
 				$combos[] = array('type' => 'filter',
 					'name' => 'reported_by',
+					'multiple'	=> true,
 					'extra' => '',
 					'text' => lang('reported by'),
 					'list' => $values_combo_box[5]
@@ -847,7 +923,7 @@ HTML;
 				foreach ($attrib_data as $attrib)
 				{
 					$_filter_data = array();
-					if (($attrib['datatype'] == 'LB' || $attrib['datatype'] == 'CH' || $attrib['datatype'] == 'R') && $attrib['choice'])
+					if (($attrib['datatype'] == 'LB' || $attrib['datatype'] == 'CH' || $attrib['datatype'] == 'R') && $attrib['choice'] && $attrib['table_filter'])
 					{
 
 						$_filter_data[] = array
@@ -906,7 +982,7 @@ HTML;
 
 			if($subs && (int)$this->parent_cat_id <= 0)
 			{
-				$GLOBALS['phpgw_info']['flags']['menu_selection'] = "helpdesk::helpdesk_{$_cat['main']}"; // to expand the menu
+//				$GLOBALS['phpgw_info']['flags']['menu_selection'] = "helpdesk::helpdesk_{$_cat['main']}"; // to expand the menu
 				$GLOBALS['phpgw_info']['flags']['app_header'] = $this->lang_app_name . ': ' . lang('choose a section from the menu');
 				self::render_template_xsl('datatable_jquery', array());
 				return;
@@ -916,23 +992,25 @@ HTML;
 			self::add_javascript('phpgwapi', 'jquery', 'editable/jquery.jeditable.js');
 			self::add_javascript('phpgwapi', 'jquery', 'editable/jquery.dataTables.editable.js');
 			self::add_javascript('helpdesk', 'portico', 'tts.index.js');
-			self::add_javascript('phpgwapi', 'materialize', 'js/materialize.min.js');
-			$GLOBALS['phpgw']->css->add_external_file('phpgwapi/js/materialize/css/materialize.css');
-			$GLOBALS['phpgw']->css->add_external_file('phpgwapi/js/materialize/css/materialize_override.css');
+
+			if($GLOBALS['phpgw_info']['user']['preferences']['common']['template_set'] == 'bootstrap' )
+			{
+				phpgwapi_jquery::load_widget('bootstrap-multiselect');
+			}
+			else
+			{
+				self::add_javascript('phpgwapi', 'materialize', 'js/materialize.min.js');
+				$GLOBALS['phpgw']->css->add_external_file('phpgwapi/js/materialize/css/materialize.css');
+				$GLOBALS['phpgw']->css->add_external_file('phpgwapi/js/materialize/css/materialize_override.css');
+			}
 
 			$start_date = urldecode($this->start_date);
 			$end_date = urldecode($this->end_date);
 
-			$GLOBALS['phpgw']->jqcal->add_listener('filter_start_date');
-			$GLOBALS['phpgw']->jqcal->add_listener('filter_end_date');
+			$GLOBALS['phpgw']->jqcal->add_listener('filter_start_date', 'date', '', array('no_button' => true));
+			$GLOBALS['phpgw']->jqcal->add_listener('filter_end_date', 'date', '', array('no_button' => true));
 
 			$appname = $this->lang_app_name;
-
-			if($this->parent_cat_id)
-			{
-				$parent_category =  CreateObject('phpgwapi.categories', -1, 'helpdesk', '.ticket')->return_single($this->parent_cat_id);
-				$appname = !empty($parent_category[0]['name']) ? $parent_category[0]['name'] : $this->lang_app_name;
-			}
 
 			$function_msg = lang('list ticket');
 
@@ -964,14 +1042,20 @@ HTML;
 				'datatable' => array(
 					'source' => self::link(array('menuaction' => 'helpdesk.uitts.index', 'parent_cat_id' => $this->parent_cat_id,
 						'phpgw_return_as' => 'json')),
-					'download' => self::link(array('menuaction' => 'helpdesk.uitts.download',
-						'export' => true, 'allrows' => true)),
+					'download' => self::link(array(
+						'menuaction' => 'helpdesk.uitts.download',
+						'parent_cat_id' => $this->parent_cat_id,
+						'export' => true,
+						'allrows' => true
+						)),
 					'allrows' => true,
 					"columns" => array('onclick' => "JqueryPortico.openPopup({menuaction:'helpdesk.uitts.columns'}, {closeAction:'reload'})"),
 					'new_item' => self::link(array('menuaction' => 'helpdesk.uitts.add', 'parent_cat_id' => $this->parent_cat_id)),
+					'bigmenubutton' => true,
 					'editor_action' => self::link(array('menuaction' => 'helpdesk.uitts.edit_survey_title')),
 					'field' => $this->_get_fields(),
-					'query' => phpgw::get_var('query')
+					'query' => phpgw::get_var('query'),
+					'group_buttons' => false,
 				)
 			);
 
@@ -998,13 +1082,37 @@ JS;
 
 			foreach ($filters as $filter)
 			{
-				if($filter['type'] == 'filter')
+				if($filter['type'] == 'filter' && $filter['multiple'] == true)
 				{
-					$js .=<<<JS
+					if($GLOBALS['phpgw_info']['user']['preferences']['common']['template_set'] == 'bootstrap' )
+					{
+							$js .=<<<JS
 
-					$("#{$filter['name']}").hide();
-					$("#{$filter['name']}").material_select();
+						$("#{$filter['name']}").multiselect({
+							buttonWidth: 250,
+							includeSelectAllOption: true,
+							enableFiltering: true,
+							enableCaseInsensitiveFiltering: true,
+							onChange: function (\$option)
+							{
+								// Check if the filter was used.
+								var query = $("#user_id").find("li.multiselect-filter input").val();
+								if (query)
+								{
+									$("#user_id").find("li.multiselect-filter input").val("").trigger("keydown");
+								}
+							}
+						});
 JS;
+					}
+					else
+					{
+							$js .=<<<JS
+							$("#{$filter['name']}").hide();
+							$("#{$filter['name']}").formSelect();
+JS;
+					}
+
 
 				}
 			}
@@ -1165,6 +1273,29 @@ JS;
 						);
 					}
 				}
+
+				$data['datatable']['actions'][] = array
+					(
+					'my_name' => 'take_over',
+					'statustext' => lang('take over'),
+					'text' => lang('take over'),
+					'confirm_msg' => lang('do you really want to take over the assignment'),
+					'action' => $GLOBALS['phpgw']->link('/index.php', array
+						(
+						'menuaction' => 'helpdesk.uitts.take_over',
+						'second_display' => true,
+						'sort' => $this->sort,
+						'order' => $this->order,
+						'cat_id' => $this->cat_id,
+						'filter' => $this->filter,
+						'user_filter' => $this->user_filter,
+						'query' => $this->query,
+						'district_id' => $this->district_id,
+						'allrows' => $this->allrows,
+						'delete' => 'dummy'// FIXME to trigger the json in property.js.
+					)),
+					'parameters' => json_encode($parameters)
+				);
 			}
 
 			if (count($data['datatable']['actions']) < 10)
@@ -1172,7 +1303,8 @@ JS;
 				$data['datatable']['group_buttons'] = false;
 			}
 
-			$GLOBALS['phpgw_info']['flags']['app_header'] = $this->lang_app_name . ': ' . $function_msg;
+			$GLOBALS['phpgw_info']['flags']['app_header'] = $this->parent_category_name ? $this->parent_category_name : $this->lang_app_name;
+			$GLOBALS['phpgw_info']['flags']['app_header'] .= ": {$function_msg}";
 
 			self::render_template_xsl('datatable_jquery', $data);
 		}
@@ -1227,6 +1359,8 @@ JS;
 			{
 				phpgw::no_access();
 			}
+
+			$GLOBALS['phpgw_info']['flags']['breadcrumb_selection'] = $GLOBALS['phpgw_info']['flags']['menu_selection'] . "::add";
 
 			$values = phpgw::get_var('values');
 			$values['contact_id'] = phpgw::get_var('contact', 'int', 'POST');
@@ -1608,7 +1742,9 @@ JS;
 				'cat_select' => $cat_select,
 				'pref_send_mail' => (isset($GLOBALS['phpgw_info']['user']['preferences']['helpdesk']['tts_user_mailnotification']) ? $GLOBALS['phpgw_info']['user']['preferences']['helpdesk']['tts_user_mailnotification'] : ''),
 				'fileupload' => true,//(isset($this->bo->config->config_data['fmttsfileupload']) ? $this->bo->config->config_data['fmttsfileupload'] : ''),
-				'tabs' => phpgwapi_jquery::tabview_generate($tabs, $active_tab)
+				'tabs' => phpgwapi_jquery::tabview_generate($tabs, $active_tab),
+				'parent_cat_id'	=> $this->parent_cat_id,
+				'account_lid'	=> $GLOBALS['phpgw_info']['user']['account_lid']
 			);
 
 			//_debug_array($data);
@@ -1618,7 +1754,7 @@ JS;
 			phpgwapi_jquery::formvalidator_generate(array('date', 'security','file'));
 			phpgwapi_jquery::load_widget('autocomplete');
 			$this->_insert_custom_js();
-			$GLOBALS['phpgw_info']['flags']['app_header'] = $this->lang_app_name . ': ' . $function_msg;
+			$GLOBALS['phpgw_info']['flags']['app_header'] = $function_msg;
 			$GLOBALS['phpgw']->xslttpl->add_file(array('tts', 'files', 'attributes_form'));
 			$GLOBALS['phpgw']->xslttpl->set_var('phpgw', array('add' => $data));
 		}
@@ -1772,6 +1908,16 @@ JS;
 
 			$id = phpgw::get_var('id', 'int', 'GET');
 
+			$GLOBALS['phpgw_info']['flags']['breadcrumb_selection'] = $GLOBALS['phpgw_info']['flags']['menu_selection'] . "::view::{$id}";
+
+			$add_external_communication = phpgw::get_var('external_communication', 'int');
+
+			if ($add_external_communication)
+			{
+				self::redirect(array('menuaction' => 'helpdesk.uiexternal_communication.edit','ticket_id' => $id,
+					'type_id' => $add_external_communication ));
+			}
+
 			$values = phpgw::get_var('values');
 			$values['contact_id'] = phpgw::get_var('contact', 'int', 'POST');
 			$values['vendor_id'] = phpgw::get_var('vendor_id', 'int', 'POST');
@@ -1792,6 +1938,32 @@ JS;
 
 			if (isset($values['save']))
 			{
+				$change_category = explode('_', phpgw::get_var('change_category', 'string', 'POST'));
+
+				if(!empty($change_category[1]))
+				{
+					$this->parent_cat_id = $change_category[0];
+					$values['cat_id'] = (int)$change_category[1];
+				}
+
+				$location_id = $GLOBALS['phpgw']->locations->get_id('helpdesk', '.ticket');
+
+				$notified = createObject('property.notify')->read(array('location_id' => $location_id, 'location_item_id' => $id));
+
+				$additional_users = array();
+				foreach ($notified as $entry)
+				{
+					if($entry['account_id'])
+					{
+						$additional_users[] = $entry['account_id'];
+					}
+				}
+
+				if(in_array($this->account, $additional_users));
+				{
+					$this->acl_edit = true;
+				}
+
 				if (!$this->acl_edit)
 				{
 					phpgw::no_access();
@@ -1912,6 +2084,26 @@ JS;
 					$sms->websend2pv($this->account, $to_sms_phone, $values['response_text']);
 					$historylog->add('MS', $id, "{$to_sms_phone}::{$values['response_text']}");
 				}
+
+				if(!empty($receipt['error']))
+				{
+					foreach ($receipt['error'] as $error)
+					{
+						phpgwapi_cache::message_set($error['msg'], 'error');
+					}
+				}
+
+				if(!empty($receipt['message']))
+				{
+					foreach ($receipt['message'] as $message)
+					{
+						phpgwapi_cache::message_set($message['msg']);
+					}
+				}
+
+				self::redirect(array('menuaction' => 'helpdesk.uitts.view','id' => $id,
+					'parent_cat_id' => $this->parent_cat_id ));
+
 			}
 
 			/* Preserve attribute values from post */
@@ -1922,6 +2114,16 @@ JS;
 
 			$ticket = $this->bo->read_single($id, $values);
 
+			if($ticket && !$this->parent_cat_id)
+			{
+				$cat_path = $this->cats->get_path($ticket['cat_id']);
+
+				if(count($cat_path) > 1)
+				{
+					$this->parent_cat_id = $cat_path[0]['id'];
+					$GLOBALS['phpgw_info']['flags']['menu_selection'] = "helpdesk::helpdesk_$this->parent_cat_id";
+				}
+			}
 			if(!$ticket)
 			{
 				$GLOBALS['phpgw']->redirect_link('/index.php', array('menuaction' => 'helpdesk.uitts.index', 'parent_cat_id' => $this->parent_cat_id));
@@ -1969,7 +2171,7 @@ JS;
 				$GLOBALS['phpgw']->jqcal->add_listener('values_finnish_date');
 			}
 
-			$additional_notes = $this->bo->read_additional_notes($id);
+			$_additional_notes = $this->bo->read_additional_notes($id);
 			$record_history = $this->bo->read_record_history($id);
 
 			$notes = array(
@@ -1983,7 +2185,44 @@ JS;
 				)
 			);
 
-			$additional_notes = array_merge($notes, $additional_notes);
+			$_additional_notes = array_merge($notes, $_additional_notes);
+			$additional_notes = array();
+
+			if ($this->_simple)
+			{
+				$i = 1;
+				foreach ($_additional_notes as $note)
+				{
+					if ($note['value_publish'])
+					{
+						$note['value_count'] = $i++;
+						$additional_notes[] = $note;
+					}
+				}
+			}
+			else
+			{
+				$i = 0;
+				$j = 1;
+				foreach ($_additional_notes as $note)
+				{
+					if ($note['value_publish'])
+					{
+						$i++;
+						$j = 1;
+					}
+					else
+					{
+						if($i)
+						{
+							$j++;
+						}
+					}
+					$i = max(array(1, $i));
+					$note['value_count'] = "{$i}.{$j}";
+					$additional_notes[] = $note;
+				}
+			}
 
 			if (isset($GLOBALS['phpgw_info']['user']['preferences']['common']['yui_table_nowrap']) && $GLOBALS['phpgw_info']['user']['preferences']['common']['yui_table_nowrap'])
 			{
@@ -2000,6 +2239,17 @@ JS;
 				array('key' => 'value_user', 'label' => lang('User'), 'sortable' => true, 'resizeable' => true),
 				array('key' => 'value_note', 'label' => lang('Note'), 'sortable' => true, 'resizeable' => true)
 			);
+
+			if (!$this->_simple)
+			{
+				$note_def[] = array('key' => 'publish_note', 'label' => lang('publish text'),
+					'sortable' => false, 'resizeable' => true, 'formatter' => 'FormatterCenter');
+				foreach ($additional_notes as &$note)
+				{
+					$_checked = $note['value_publish'] ? 'checked' : '';
+					$note['publish_note'] = "<input type='checkbox' {$_checked}  name='values[publish_note][]' value='{$id}_{$note['value_id']}' title='" . lang('Check to publish text') . "'>";
+				}
+			}
 
 			foreach ($additional_notes as &$note)
 			{
@@ -2027,7 +2277,10 @@ JS;
 			$datatable_def[] = array(
 				'container' => 'datatable-container_1',
 				'requestUrl' => "''",
-				'ColumnDefs' => array(array('key' => 'value_date', 'label' => lang('Date'), 'sortable' => true,
+				'ColumnDefs' => array(
+					array('key' => 'value_id', 'label' => '#', 'sortable' => true,
+						'resizeable' => true),
+					array('key' => 'value_date', 'label' => lang('Date'), 'sortable' => true,
 						'resizeable' => true),
 					array('key' => 'value_user', 'label' => lang('User'), 'sortable' => true, 'resizeable' => true),
 					array('key' => 'value_action', 'label' => lang('Action'), 'sortable' => true,
@@ -2039,7 +2292,8 @@ JS;
 				'data' => json_encode($record_history),
 				'config' => array(
 					array('disableFilter' => true),
-					array('disablePagination' => true)
+					array('disablePagination' => true),
+					array('order' => json_encode(array(0,'asc')))
 				)
 			);
 
@@ -2081,11 +2335,13 @@ JS;
 				array('key' => 'file_name', 'label' => lang('Filename'), 'sortable' => false,
 					'resizeable' => true),
 				array('key' => 'picture', 'label' => lang('picture'), 'sortable' => false,
-					'resizeable' => true, 'formatter' => 'JqueryPortico.showPicture'),
-				array('key' => 'delete_file', 'label' => lang('Delete file'), 'sortable' => false,
-					'resizeable' => true, 'formatter' => 'FormatterCenter'),
+					'resizeable' => true, 'formatter' => 'JqueryPortico.showPicture')
 			);
-
+			if (!$this->_simple)
+			{
+				$attach_file_def[] = array('key' => 'delete_file', 'label' => lang('Delete file'), 'sortable' => false,
+					'resizeable' => true, 'formatter' => 'FormatterCenter');
+			}
 			$datatable_def[] = array
 				(
 				'container' => 'datatable-container_2',
@@ -2121,6 +2377,56 @@ JS;
 				'config' => array(
 					array('disableFilter' => true),
 					array('disablePagination' => true)
+				)
+			);
+
+			$external_messages_def = array(
+				array(
+					'key' => 'id',
+					'label' => lang('id'),
+					'hidden' => false
+					),
+				array(
+					'key' => 'subject_link',
+					'label' => lang('subject'),
+					'hidden' => false,
+					'sortable' => true,
+					),
+				array(
+					'key' => 'mail_recipients',
+					'label' => lang('email'),
+					'hidden' => false,
+					'sortable' => true,
+					),
+				array(
+					'key' => 'modified_date',
+					'label' => lang('modified date'),
+					'hidden' => false,
+					'sortable' => true,
+					)
+				);
+
+			$external_messages = createObject('helpdesk.soexternal_communication')->read($id);
+
+			foreach ($external_messages as &$external_message)
+			{
+				$external_message['modified_date'] = $GLOBALS['phpgw']->common->show_date($external_message['modified_date']);
+				$external_message['mail_recipients'] = implode(', ', $external_message['mail_recipients']);
+				$external_message['subject_link'] = "<a href=\"" . self::link(array('menuaction' => 'helpdesk.uiexternal_communication.edit',
+						'id' => $external_message['id'], 'ticket_id' => $id)) . "\">{$external_message['subject']}</a>";
+			}
+
+			$datatable_def[] = array
+				(
+				'container' => 'datatable-container_7',
+				'requestUrl' => "''",
+				'data' => json_encode($external_messages),
+				'ColumnDefs' => $external_messages_def,
+				'config' => array(
+					array(
+						'disableFilter' => true),
+					array(
+						'disablePagination' => true)
 				)
 			);
 
@@ -2173,7 +2479,7 @@ JS;
 					}
 				}
 			}
-
+			unset($_cat);
 
 			$_ticket_cat_found = false;
 			if (isset($cat_select['cat_list']) && is_array($cat_select['cat_list']))
@@ -2205,6 +2511,51 @@ JS;
 //_debug_array($cat_select);die();
 			}
 
+
+			/**
+			 * change parent category
+			 */
+
+			$_cats = $this->cats->return_sorted_array(0, false);
+			$cat_change_list = array();
+			foreach ($_cats as $_cat)
+			{
+				if ($_cat['active'] != 2)
+				{
+					if($_cat['level'] == 0)
+					{
+						$cat_opt_group_id = $_cat['id'];
+						$cat_change_list[$cat_opt_group_id] = array
+						(
+							'label' => $GLOBALS['phpgw']->strip_html($_cat['name'])
+						);
+					}
+					else if($_cat['level'] > 0)
+					{
+						$cat_name_arr = array();
+						$cat_path = $this->cats->get_path($_cat['id']);
+
+						foreach ($cat_path as $cat_path_entry)
+						{
+							if($cat_path_entry['id'] == $cat_opt_group_id)
+							{
+								continue;
+							}
+
+							$cat_name_arr[] = $cat_path_entry['name'];
+						}
+						$cat_name = implode(' -> ', $cat_name_arr);
+
+						$cat_change_list[$cat_opt_group_id]['options'][] = array
+						(
+							'id'	=> "{$_cat['parent']}_{$_cat['id']}",
+							'name'	=> $cat_name,
+							'title' => $_cat['description']
+						);
+					}
+
+				}
+			}
 
 			$membership = $GLOBALS['phpgw']->accounts->membership($this->account);
 			$my_groups = array();
@@ -2303,7 +2654,9 @@ JS;
 						'type' => 'tax', 'selected' => $ticket['tax_code'], 'order' => 'id',
 						'id_in_name' => 'num'))),
 				'tabs' => phpgwapi_jquery::tabview_generate($tabs, $active_tab),
-				'set_user' => ($ticket['user_id'] != $ticket['reverse_id'] && $ticket['assignedto'] ==  $this->account) ? true : false
+				'set_user' => ($ticket['user_id'] != $ticket['reverse_id'] && $ticket['assignedto'] ==  $this->account) ? true : false,
+				'parent_cat_id' => $this->parent_cat_id,
+				'cat_change_list' => $cat_change_list
 			);
 
 			phpgwapi_jquery::load_widget('numberformat');
@@ -2315,7 +2668,7 @@ JS;
 			//_debug_array($data);die();
 
 			$function_msg = lang('view ticket detail');
-			$GLOBALS['phpgw_info']['flags']['app_header'] = $this->lang_app_name . ': ' . $function_msg;
+			$GLOBALS['phpgw_info']['flags']['app_header'] = $function_msg . "#{$id}";
 			$GLOBALS['phpgw']->xslttpl->set_var('phpgw', array('view' => $data));
 		}
 
@@ -2393,9 +2746,64 @@ JS;
 				}
 			}
 
-			return $ajax_result;
+			if(!empty($ajax_result))
+			{
+				return $ajax_result;
+			}
+			else
+			{
+				try
+				{
+					$method = phpgw::get_var('method');
+
+					switch ($method)
+					{
+						case 'get_reverse_assignee':
+							return $this->get_reverse_assignee();
+							break;
+						default:
+							break;
+					}
+				}
+				catch (Exception $exc)
+				{
+					echo $exc->getTraceAsString();
+				}
+			}
+
 		}
+
 		/**
+		 * Fallback function
+		 * @return array
+		 */
+		private function get_reverse_assignee()
+		{
+			$query = phpgw::get_var('on_behalf_of_lid');
+
+			$filter = array('active' => 1);
+
+			$account_list = $GLOBALS['phpgw']->accounts->get_list('accounts', -1,'ASC', 'account_lastname',  $query, false, $filter);
+
+			$values = array();
+
+			foreach ($account_list as $account)
+			{
+				$values[] = array(
+					'id' => $account->lid,
+					'name' => $account->lid . ' [' . $account->__toString() . ']',
+					'stilling'	 => '',
+					'office'	 => ''
+				);
+			}
+
+			return array(
+				'total_records'	 => count($values),
+				'results'		 => $values
+			);
+		}
+
+				/**
 		 *
 		 */
 		private function _insert_custom_js()
@@ -2438,22 +2846,48 @@ JS;
 			}
 		}
 
-		private function _get_user_list($selected)
+		private function _get_user_list($selected, $group_id = 0, $acl_location = '')
 		{
 			$xsl_rootdir = PHPGW_SERVER_ROOT . "/property/templates/{$GLOBALS['phpgw_info']['server']['template_set']}";
 
 			$GLOBALS['phpgw']->xslttpl->add_file(array('user_id_select'), $xsl_rootdir);
 
-			if($this->parent_cat_id)
+			if(!$acl_location && $this->parent_cat_id)
 			{
 				$acl_location = ".ticket.category.{$this->parent_cat_id}";
 			}
-			else
+			else if(!$acl_location)
 			{
 				$acl_location = $this->acl_location;
 			}
 
-			$users = $GLOBALS['phpgw']->acl->get_user_list_right(PHPGW_ACL_EDIT, $acl_location, 'helpdesk', $this->_group_candidates);
+			if($group_id)
+			{
+				$_group_candidates = array($group_id);
+			}
+			else
+			{
+				$_group_candidates = $this->_group_candidates;
+			}
+
+
+			if($selected)
+			{
+				if(is_array($selected))
+				{
+					$_selected = $selected;
+				}
+				else
+				{
+					$_selected = array($selected);
+				}
+			}
+			else
+			{
+				$_selected = array();
+			}
+
+			$users = $GLOBALS['phpgw']->acl->get_user_list_right(PHPGW_ACL_EDIT, $acl_location, 'helpdesk', $_group_candidates);
 			$user_list = array();
 			$selected_found = false;
 			foreach ($users as $user)
@@ -2462,22 +2896,31 @@ JS;
 				$user_list[] = array(
 					'id' => $user['account_id'],
 					'name' => $name,
-					'selected' => $user['account_id'] == $selected ? 1 : 0
+					'selected' => in_array($user['account_id'], $_selected) ? 1 : 0
 				);
 
 				if (!$selected_found)
 				{
-					$selected_found = $user['account_id'] == $selected ? true : false;
+					$selected_found = in_array($user['account_id'], $_selected) ? true : false;
 				}
 			}
-			if ($selected && !$selected_found)
+
+			if ($_selected && !$selected_found)
 			{
-				$user_list[] = array
-					(
-					'id' => $selected,
-					'name' => $GLOBALS['phpgw']->accounts->get($selected)->__toString(),
-					'selected' => 1
-				);
+				foreach ($_selected as $__selected)
+				{
+					if($__selected < 0)
+					{
+						continue;
+					}
+					$user_list[] = array
+						(
+						'id' => $selected,
+						'name' => $GLOBALS['phpgw']->accounts->get($__selected)->__toString(),
+						'selected' => 1
+					);
+
+				}
 			}
 			return $user_list;
 		}

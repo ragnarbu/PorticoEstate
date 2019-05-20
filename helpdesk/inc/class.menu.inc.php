@@ -79,7 +79,16 @@
 						'index'	=> array
 						(
 							'text'	=> lang('Configuration'),
-							'url'	=> $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'admin.uiconfig.index', 'appname' => 'helpdesk') )
+							'url'	=> $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'admin.uiconfig.index', 'appname' => 'helpdesk') ),
+							'children' => array
+								(
+								'custom_config' => array
+									(
+									'text' => lang('custom config'),
+									'url' => $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'admin.uiconfig2.index',
+										'location_id' => $GLOBALS['phpgw']->locations->get_id('helpdesk', '.admin')))
+								)
+							)
 						),
 						'ticket_attribs' => array
 							(
@@ -98,6 +107,16 @@
 							'text'	=> lang('Ticket Categories'),
 							'url'	=> $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'admin.uicategories.index', 'appname' => 'helpdesk', 'location' => '.ticket', 'global_cats' => 'true', 'menu_selection' => 'admin::helpdesk::ticket_cats') )
 						),
+						'cat_assignment'	=> array
+						(
+							'text'	=> lang('category assignment'),
+							'url'	=> $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'helpdesk.uicat_assignment.edit') )
+						),
+						'cat_respond_messages'	=> array
+						(
+							'text'	=> lang('category respond messages'),
+							'url'	=> $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'helpdesk.uicat_respond_messages.edit') )
+						),
 						'ticket_status'	=> array
 						(
 							'text'	=> lang('Ticket status'),
@@ -107,6 +126,12 @@
 						(
 							'text'	=> lang('Configure Access Permissions'),
 							'url'	=> $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'preferences.uiadmin_acl.list_acl', 'acl_app' => 'helpdesk') )
+						),
+						'external_com_type' => array
+							(
+							'text' => lang('external communication type'),
+							'url' => $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'helpdesk.uigeneric.index',
+								'type' => 'external_com_type'))
 						),
 						'custom_menu_items' => array
 							(
@@ -155,7 +180,7 @@
 				$subs = false;
 				foreach ($_cats as $_cat)
 				{
-					if ($_cat['level'] == 0 && $_cat['active'] != 2)
+					if ($_cat['level'] == 0 && $_cat['active'] != 2 && $acl->check(".ticket.category.{$_cat['id']}",PHPGW_ACL_READ, 'helpdesk') )
 					{
 						$_categories[] = $_cat;
 					}

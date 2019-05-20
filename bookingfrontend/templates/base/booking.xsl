@@ -9,9 +9,7 @@
 			</li>
 			<li>#<xsl:value-of select="booking/id"/> (<xsl:value-of select="booking/activity_name"/>)</li>
 		</ul>
-
 		<xsl:call-template name="msgbox"/>
-
 		<dl class="proplist-col">
 			<dt>
 				<xsl:value-of select="php:function('lang', 'From')" />
@@ -54,7 +52,6 @@
 				<div id="resources_container"/>
 			</dd>
 		</dl>
-
 		<div class="form-buttons">
 			<xsl:if test="booking/permission/write">
 				<button>
@@ -68,12 +65,11 @@
 			</xsl:if>
 		</div>
 	</div>
-    
-	<script type="text/javascript">
+	<script>
 		var resourcesIds = '<xsl:value-of select="booking/resource_ids" />';
 		var lang = <xsl:value-of select="php:function('js_lang', 'Name', 'Resource Type')" />;
         <![CDATA[
-            var resourceURL = phpGWLink('bookingfrontend/index.php', {menuaction: 'bookingfrontend.uiresource.index_json', sort:'name'}, true) + '&' + resourcesIds;
+            var resourceURL = phpGWLink('bookingfrontend/index.php', {menuaction: 'bookingfrontend.uiresource.index_json', sort:'name', length:-1}, true) + '&' + resourcesIds;
         ]]>
 		var colDefsResources = [{key: 'name', label: lang['Name'], formatter: genericLink}, {key: 'type', label: lang['Resource Type']}];
 		createTable('resources_container', resourceURL, colDefsResources, 'results');

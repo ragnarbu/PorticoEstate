@@ -277,7 +277,7 @@
 			return "'" . $this->db->db_addslashes($value) . "'";
 		}
 
-		function _unmarshal( $value, $type )
+		function _unmarshal( $value, $type, $modifier ='')
 		{
 			$type = strtolower($type);
 			/* phpgw always returns empty strings (i.e '') for null values */
@@ -306,6 +306,11 @@
 			if (!$this->valid_field_type($type))
 			{
 				throw new LogicException(sprintf('Invalid type "%s"', $type));
+			}
+
+			if($modifier && method_exists($this,$modifier))
+			{
+				call_user_func_array(array($this, "$modifier"), array(&$value));
 			}
 
 			return $value;
@@ -346,6 +351,8 @@
 			{
 				foreach ($this->fields as $field => $params)
 				{
+					$modifier = !empty($params['read_callback']) ? $params['read_callback']  : '';
+
 					if ($params['manytomany'])
 					{
 						$table = $params['manytomany']['table'];
@@ -377,14 +384,16 @@
 									{
 										$col = $intOrCol;
 										$type = isset($paramsOrCol['type']) ? $paramsOrCol['type'] : $params['type'];
+										$_modifier = !empty($paramsOrCol['read_callback']) ? $paramsOrCol['read_callback']  : $modifier;
 									}
 									else
 									{
 										$col = $paramsOrCol;
 										$type = $params['type'];
+										$_modifier = $modifier;
 									}
 
-									$data[$col] = $this->_unmarshal($this->db2->f($col, false), $type);
+									$data[$col] = $this->_unmarshal($this->db2->f($col, false), $type, $_modifier);
 								}
 								$row[$field][] = $data;
 							}
@@ -396,13 +405,13 @@
 							$row[$field] = array();
 							while ($this->db2->next_record())
 							{
-								$row[$field][] = $this->_unmarshal($this->db2->f($column, false), $params['type']);
+								$row[$field][] = $this->_unmarshal($this->db2->f($column, false), $params['type'], $modifier);
 							}
 						}
 					}
 					else
 					{
-						$row[$field] = $this->_unmarshal($this->db->f($field, false), $params['type']);
+						$row[$field] = $this->_unmarshal($this->db->f($field, false), $params['type'], $modifier);
 					}
 				}
 			}
@@ -596,8 +605,20 @@
 		 */
 		function read( $params )
 		{
+			$maxmatchs	 = $GLOBALS['phpgw_info']['user']['preferences']['common']['maxmatchs'];
+
 			$start = isset($params['start']) && $params['start'] ? (int)$params['start'] : 0;
-			$results = isset($params['results']) && $params['results'] ? (int)$params['results'] : null;
+			$results = isset($params['results']) && $params['results'] ? $params['results'] : $maxmatchs;
+
+			if($results == -1 || $results ==='all' || (!empty($params['length']) && $params['length'] == -1))
+			{
+				$results = null;
+			}
+			else
+			{
+				$results = (int)$results;
+			}
+
 			$sort = isset($params['sort']) && $params['sort'] ? $params['sort'] : null;
 			$dir = isset($params['dir']) && $params['dir'] ? $params['dir'] : 'asc';
 			$query = isset($params['query']) && $params['query'] ? $params['query'] : null;
@@ -648,7 +669,8 @@
 				$row = array();
 				foreach ($this->fields as $field => $params)
 				{
-					$row[$field] = $this->_unmarshal($this->db->f($field, false), $params['type']);
+					$modifier = !empty($params['read_callback']) ? $params['read_callback']  : '';
+					$row[$field] = $this->_unmarshal($this->db->f($field, false), $params['type'], $modifier);
 				}
 				$results[] = $row;
 			}
@@ -660,6 +682,7 @@
 				}
 				foreach ($this->fields as $field => $params)
 				{
+					$modifier = !empty($params['read_callback']) ? $params['read_callback']  : '';
 					if ($params['manytomany'])
 					{
 						$row[$field] = array();
@@ -678,7 +701,7 @@
 							$this->db->query("SELECT $colnames, $key FROM $table WHERE $key IN($ids)", __LINE__, __FILE__);
 							while ($this->db->next_record())
 							{
-								$id = $this->_unmarshal($this->db->f($key, false), 'int');
+								$id = $this->_unmarshal($this->db->f($key, false), 'int', $modifier);
 								if(empty($results[$id_map[$id]][$field]))
 								{
 									$results[$id_map[$id]][$field] = array();
@@ -690,14 +713,16 @@
 									{
 										$col = $intOrCol;
 										$type = isset($paramsOrCol['type']) ? $paramsOrCol['type'] : $params['type'];
+										$_modifier = !empty($paramsOrCol['read_callback']) ? $paramsOrCol['read_callback']  : $modifier;
 									}
 									else
 									{
 										$col = $paramsOrCol;
 										$type = $params['type'];
+										$_modifier = $modifier;
 									}
 
-									$data[$col] = $this->_unmarshal($this->db->f($col, false), $type);
+									$data[$col] = $this->_unmarshal($this->db->f($col, false), $type, $_modifier);
 								}
 								$row[$field][] = $data;
 								$results[$id_map[$id]][$field][] = $data;
@@ -714,7 +739,7 @@
 								{
 									$results[$id_map[$id]][$field] = array();
 								}
-								$results[$id_map[$id]][$field][] = $this->_unmarshal($this->db->f($column, false), $params['type']);
+								$results[$id_map[$id]][$field][] = $this->_unmarshal($this->db->f($column, false), $params['type'], $modifier);
 							}
 						}
 					}
@@ -727,6 +752,21 @@
 				'sort' => is_array($sort) ? $sort[0] : $sort,
 				'dir' => $dir
 			);
+		}
+
+		/**
+		 * Convert from utc to user's timezone
+		 * @param string $value
+		 */
+		protected function modify_by_timezone( &$value )
+		{
+			$timezone = $GLOBALS['phpgw_info']['user']['preferences']['common']['timezone'];
+			if(!empty($timezone))
+			{
+				$datetime = new DateTime($value, new DateTimeZone('UTC'));
+				$datetime->setTimeZone(new DateTimeZone($timezone));
+				$value = $datetime->format('Y-m-d H:i:s');
+			}
 		}
 
 		protected function is_auto_field_def( array &$field_def, $action )
@@ -762,7 +802,9 @@
 						foreach ($this->fields as $field => $params)
 						{
 							if (!$this->is_auto_field_def($params, $supported_action))
+							{
 								continue;
+							}
 							$params['action_callback'] = $this->get_auto_field_def_callback($params, $supported_action);
 							$params['action'] = $supported_action;
 							$action_auto_fields[$field] = $params;
@@ -1092,7 +1134,7 @@
 			}
 		}
 
-		function validate( $entity )
+		function validate( &$entity )
 		{
 			$errors = $this->create_error_stack();
 			$this->preValidate($entity);

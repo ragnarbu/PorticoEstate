@@ -176,7 +176,7 @@ $(".navbar-search").removeClass("d-none");
           });
   
           var parameter = {
-              menuaction: "booking.uidocument_view.regulations",
+              menuaction: "bookingfrontend.uidocument_view.regulations",
               'owner[]':  "building::"+urlParams['building_id'],
               sort: "name"
           };
@@ -237,7 +237,14 @@ $(".navbar-search").removeClass("d-none");
   function validate() {
       
   }
+
+	var dateformat_datepicker = dateformat_backend.replace(/d/gi, "%d").replace(/m/gi, "%m").replace(/y/gi, "%Y");
+
+  var d = new Date();
+	var strDate = $.datepicker.formatDate('mm/dd/yy', new Date());
+
   YUI({ lang: 'nb-no' }).use(
+	
     'aui-datepicker',
     function(Y) {
       new Y.DatePicker(
@@ -246,18 +253,25 @@ $(".navbar-search").removeClass("d-none");
           popover: {
             zIndex: 99999
           },
-          mask: '%d/%m/%G',
+//        mask: '%d/%m/%G',
+          mask: dateformat_datepicker,
+		  calendar: {
+			minimumDate: new Date(strDate) 
+		  },
+		  disabledDatesRule: 'minimumDate',
           on: {
-            selectionChange: function(event) { 
+            selectionChange: function(event) {
                 new Date(event.newSelection);
                 $(".datepicker-btn").val(event.newSelection);
                 am.bookingDate(event.newSelection);
+				return false;
             }
           }
         }
       );
     }
   );
+  
   YUI({ lang: 'nb-no' }).use(
     'aui-timepicker',
     function(Y) {

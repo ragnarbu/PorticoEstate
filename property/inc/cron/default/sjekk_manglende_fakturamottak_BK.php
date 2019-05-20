@@ -42,15 +42,15 @@
 			parent::__construct();
 
 			$this->function_name = get_class($this);
-			$this->sub_location = lang('property');
-			$this->function_msg = 'oppdater bestillinger med grunnlag i betalte faktura';
+			$this->sub_location	 = lang('property');
+			$this->function_msg	 = 'oppdater bestillinger med grunnlag i betalte faktura';
 			/**
 			 * Bruker konffigurasjon fra '.ticket' - fordi denne definerer oppslaget mot fullmaktsregisteret ved bestilling.
 			 */
-			$config					= CreateObject('admin.soconfig', $GLOBALS['phpgw']->locations->get_id('property', '.ticket'));
-			$this->soap_url			= $config->config_data['external_register']['url'];
-			$this->soap_username	= $config->config_data['external_register']['username'];
-			$this->soap_password	= $config->config_data['external_register']['password'];
+			$config				 = CreateObject('admin.soconfig', $GLOBALS['phpgw']->locations->get_id('property', '.ticket'));
+			$this->soap_url		 = $config->config_data['external_register']['url'];
+			$this->soap_username = $config->config_data['external_register']['username'];
+			$this->soap_password = $config->config_data['external_register']['password'];
 		}
 
 		function execute()
@@ -62,7 +62,6 @@
 			//curl -s -u portico:******** http://tjenester.usrv.ubergenkom.no/api/agresso/objekt?id=5001
 			//curl -s -u portico:******** http://tjenester.usrv.ubergenkom.no/api/agresso/prosjekt?id=5001
 			//curl -s -u portico:******** http://tjenester.usrv.ubergenkom.no/api/agresso/tjeneste?id=88010
-
 			//curl -s -u portico:******** http://tjenester.usrv.ubergenkom.no/api/agresso/leverandorer?leverandorNr=722920
 			//curl -s -u portico:******** http://tjenester.usrv.ubergenkom.no/api/agresso/manglendevaremottak
 
@@ -78,6 +77,7 @@
 
 			if ($this->debug)
 			{
+
 			}
 			set_time_limit(2000);
 
@@ -90,11 +90,10 @@
 				$this->receipt['error'][] = array('msg' => $e->getMessage());
 			}
 
-			$msg = 'Tidsbruk: ' . (time() - $start) . ' sekunder';
+			$msg						 = 'Tidsbruk: ' . (time() - $start) . ' sekunder';
 			$this->cron_log($msg, $cron);
 			echo "$msg\n";
-			$this->receipt['message'][] = array('msg' => $msg);
-
+			$this->receipt['message'][]	 = array('msg' => $msg);
 		}
 
 		function cron_log( $receipt = '' )
@@ -116,24 +115,25 @@
 
 		private function check_missing()
 		{
-			$data = (array)$this->get_data($voucher['voucher_id']);
+			$data = (array)$this->get_data();
+
+			$this->check_if_received($data);
 			$send = CreateObject('phpgwapi.send');
 
-			$subject = 'Manglende varemottak';
 			if (!isset($GLOBALS['phpgw_info']['server']['smtp_server']) || !$GLOBALS['phpgw_info']['server']['smtp_server'])
 			{
 				_debug_array($data);
 			}
 
 			$subject = 'Manglende fakturamottak i Agresso';
-			$from = "Ikke svar<IkkeSvar@Bergen.kommune.no>";
-			$to = "Sigurd.Nes@bergen.kommune.no";
-			$cc = "";
-			$bcc = "";
+			$from	 = "Ikke svar<IkkeSvar@Bergen.kommune.no>";
+			$to		 = "Sigurd.Nes@bergen.kommune.no";
+			$cc		 = "";
+			$bcc	 = "";
 
 			if ($data)
 			{
-				$body = '<pre>' . print_r($data,true) . '</pre>';
+				$body = '<pre>' . print_r($data, true) . '</pre>';
 				try
 				{
 					$rc = $send->msg('email', $to, $subject, $body, '', $cc, $bcc, $from, '', 'html');
@@ -143,28 +143,49 @@
 					$this->receipt['error'][] = array('msg' => $e->getMessage());
 				}
 			}
-
 		}
 
-		function get_data( $voucher_id )
+		function check_if_received( &$data )
+		{
+
+			foreach ($data as &$valueset)
+			{
+				$sql	 = <<<SQL
+					SELECT fakturamottak.regtid
+					FROM ( SELECT  fm_ecobilagoverf.regtid
+						FROM fm_ecobilagoverf WHERE external_voucher_id = {$valueset['bilagsNr']}
+							UNION ALL
+						SELECT fm_ecobilag.regtid
+						FROM fm_ecobilag WHERE external_voucher_id = {$valueset['bilagsNr']}
+						 ) fakturamottak
+SQL;
+				$this->db->query($sql, __LINE__, __FILE__);
+				$this->db->next_record();
+				$regtid	 = $this->db->f('regtid');
+
+				$valueset['Mottatt_fra_Agresso'] = $regtid ? $regtid : 'Ikke mottatt';
+			}
+		}
+
+		function get_data()
 		{
 			//curl -s -u portico:******** http://tjenester.usrv.ubergenkom.no/api/agresso/manglendevaremottak
-			$url = "{$this->soap_url}/manglendevaremottak";
-			$username	= $this->soap_username; //'portico';
-			$password	= $this->soap_password; //'********';
+			$url		 = "{$this->soap_url}/manglendevaremottak";
+			$username	 = $this->soap_username; //'portico';
+			$password	 = $this->soap_password; //'********';
 
 			$ch = curl_init();
 			curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
 			curl_setopt($ch, CURLOPT_URL, $url);
 			curl_setopt($ch, CURLOPT_USERPWD, "{$username}:{$password}");
 			curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-			curl_setopt($ch, CURLOPT_HTTPHEADER, array( 'Content-Type: application/json'));
+			curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
 
 			$result = curl_exec($ch);
 
 			$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-			if(!$httpCode)
+			if (!$httpCode)
 			{
 				throw new Exception("No connection: {$url}");
 			}
@@ -173,7 +194,5 @@
 			$result = json_decode($result, true);
 
 			return $result;
-
 		}
-
 	}

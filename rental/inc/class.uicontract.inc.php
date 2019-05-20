@@ -1526,11 +1526,12 @@ JS;
 
 				}
 
-				$party =  rental_soparty::get_instance()->get_single($party_id);
-	//			_debug_array($party);
-
-				$ret['identifier'] = $party->get_identifier();
-				$ret['mobile_phone'] = $party->get_mobile_phone();
+				if($party_id)
+				{
+					$party =  rental_soparty::get_instance()->get_single($party_id);
+					$ret['identifier'] = $party->get_identifier();
+					$ret['mobile_phone'] = $party->get_mobile_phone();
+				}
 
 				return $ret;
 			}
@@ -1972,6 +1973,10 @@ JS;
 				'id' => '2',
 				'name' => '2 ' . lang('year'),
 				'selected' => (($current_interval == '2') ? 1 : 0));
+			$adjustment_interval_options[] = array(
+				'id' => '3',
+				'name' => '3 ' . lang('year'),
+				'selected' => (($current_interval == '3') ? 1 : 0));
 			$adjustment_interval_options[] = array(
 				'id' => '10',
 				'name' => '10 ' . lang('year'),

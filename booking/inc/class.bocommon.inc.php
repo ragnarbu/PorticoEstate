@@ -75,6 +75,12 @@
 			$query = phpgw::get_var('query');
 			$sort = phpgw::get_var('sort');
 			$dir = phpgw::get_var('dir');
+			$length = phpgw::get_var('length', 'int', 'REQUEST', 0);
+
+			if($length)
+			{
+				$results = $length;
+			}
 
 			$filters = array();
 			foreach ($this->so->get_field_defs() as $field => $params)
@@ -162,7 +168,7 @@
 			return $this->so->create_error_stack($errors);
 		}
 
-		function validate( $entity )
+		function validate( &$entity )
 		{
 			$error_stack = $this->create_error_stack($this->so->validate($entity));
 			$this->doValidate($entity, $error_stack);
@@ -199,10 +205,13 @@
 		function has_role( $role )
 		{
 			$permission_root_bo = CreateObject('booking.bopermission_root');
-			$filters['filters']['role'] = $role;
-			$filters['filters']['subject_id'] = $GLOBALS['phpgw_info']['user']['id']; // id for the current user
-
-			$booking_roles = $permission_root_bo->so->read($filters);
+			$params = array(
+				'results' =>'all',
+				'filters' => array(
+					'role' => $role,
+					'subject_id' => $GLOBALS['phpgw_info']['user']['id'] // id for the current user
+				));
+			$booking_roles = $permission_root_bo->so->read($params);
 
 			if (intval($booking_roles['total_records']) == 1)
 			{

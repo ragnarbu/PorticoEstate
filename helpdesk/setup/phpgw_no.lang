@@ -88,6 +88,7 @@ location	helpdesk	no	Lokasjon
 member	helpdesk	no	Medlem
 ticket %1 has been saved	helpdesk	no	Melding %1 er lagret
 ticket %1 has been deleted	helpdesk	no	Melding %1 er slettet
+ticket %1 has been sent	helpdesk	no	Melding %1 er sendt
 my submitted tickets	helpdesk	no	Meldinger startet av meg
 check to attach file	helpdesk	no	Merk for å legge ved fil
 check to delete file	helpdesk	no	Merk for å slette fil
@@ -188,7 +189,7 @@ recipients	helpdesk	no	Mottakere
 candidates	helpdesk	no	Kandidater
 send email	helpdesk	no	Send epost
 remark	helpdesk	no	Merknad
-subject	helpdesk	no	Overskrift
+subject	helpdesk	no	Emnefelt
 content	helpdesk	no	Innhold
 select all	helpdesk	no	Velg alle
 planned	helpdesk	no	Planlagt
@@ -222,3 +223,30 @@ email_create_account_title	helpdesk	no	LRS systemtilgang
 email_create_account_message	helpdesk	no	Systemmelding fra LRS til %1 %2:<br/>Det er opprettet en tilgang for deg i LRS<br/><br/>Du får tilgang til systemet via kommunens intranett.<br/>Under verktøy i høyre kolonne, velg fra LRS listen.<br/>Brukerveiledning finner du i systemet, ved å velge "Hjelp" i toppmenyen.<br/>Har du spørsmål send en e-post til LRS brukerstøtte.<br/>
 choose a section from the menu	helpdesk	no	Velg en avdeling fra menyen
 please enter value for attribute %1	helpdesk	no	Vennligst angi verdi for feltet %1
+external communication	helpdesk	no	Ekstern melding
+internal communication	helpdesk	no	Intern melding
+comma separated list	helpdesk	no	Kommaseparert liste
+external communication type	helpdesk	no	Ekstern meldingstype
+message	helpdesk	no	Melding
+messages	helpdesk	no	Meldinger
+message has been saved	helpdesk	no	Melding er lagret
+who	helpdesk	no	Hvem
+extra mail address	helpdesk	no	Ekstra adresse
+preview html	helpdesk	no	Forhåndsvis som HTML
+change category	helpdesk	no	Flytt saken
+created	helpdesk	no	Registrert
+internal remark on email	helpdesk	no	Intern kommentar til epost
+recipient set	helpdesk	no	Adresseliste
+publish text	helpdesk	no	Publiser tekst
+Check to publish text	helpdesk	no	Merk av for å publisere til alle
+assignment has been changed for %1	helpdesk	no	Tildeling er endret for %1
+do you really want to take over the assignment	helpdesk	no	Vil du ta over oppgaven
+category assignment	helpdesk	no	Tildeling pr kategori
+category assignment has been saved	helpdesk	no	Tildeling pr kategori er lagret
+external origin email	helpdesk	no	Ekstern avsender
+on behalf of	helpdesk	no	Hvem saken gjelder
+Enter username or ssn	helpdesk	no	Legg inn alias, ressursnr eller fødselsnr
+reverse alternative	helpdesk	no	Utvidet revers tildeling
+category respond messages	helpdesk	no	Tilbakemeldinger pr kategori
+category respond messages has been saved	helpdesk	no	Tilbakemeldinger pr kategori er lagret
+include content	helpdesk	no	Inkluder innhold fra saken

@@ -2,7 +2,7 @@ var building_id_selection = "";
 
 $(document).ready(function ()
 {
-	JqueryPortico.autocompleteHelper('index.php?menuaction=booking.uibuilding.index&phpgw_return_as=json&',
+	JqueryPortico.autocompleteHelper(phpGWLink('index.php', {menuaction: 'booking.uibuilding.index'}, true),
 		'field_building_name', 'field_building_id', 'building_container');
 });
 
@@ -51,7 +51,8 @@ if ($.formUtils)
 
 function populateTableChkSeasons(building_id, selection)
 {
-	var url = 'index.php?menuaction=booking.uiseason.index&sort=name&filter_building_id=' + building_id + '&phpgw_return_as=json&';
+	var url = phpGWLink('index.php', {menuaction: 'booking.uiseason.index', sort: 'name', filter_building_id: building_id, length: -1}, true);
+
 	var container = 'season_container';
 	var colDefsSeasons = [{label: '', object: [{type: 'input', attrs: [
 						{name: 'type', value: 'checkbox'}, {name: 'name', value: 'seasons[]'}
@@ -63,5 +64,5 @@ function populateTableChkSeasons(building_id, selection)
 
 function populateTableChk(url, container, colDefs)
 {
-	createTable(container, url, colDefs);
+	createTable(container, url, colDefs, '', 'pure-table pure-table-bordered');
 }

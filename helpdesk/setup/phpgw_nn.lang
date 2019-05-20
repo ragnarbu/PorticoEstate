@@ -88,6 +88,7 @@ location	helpdesk	nn	Lokasjon
 member	helpdesk	nn	Medlem
 ticket %1 has been saved	helpdesk	nn	Melding %1 er lagret
 ticket %1 has been deleted	helpdesk	nn	Melding %1 er slettet
+ticket %1 has been sent	helpdesk	nn	Melding %1 er sendt
 my submitted tickets	helpdesk	nn	Meldinger startet av meg
 check to attach file	helpdesk	nn	Merk for å legge ved fil
 check to delete file	helpdesk	nn	Merk for å slette fil
@@ -188,7 +189,7 @@ recipients	helpdesk	nn	Mottakere
 candidates	helpdesk	nn	Kandidater
 send email	helpdesk	nn	Send epost
 remark	helpdesk	nn	Merknad
-subject	helpdesk	nn	Overskrift
+subject	helpdesk	nn	Emnefelt
 content	helpdesk	nn	Innhold
 select all	helpdesk	nn	Velg alle
 planned	helpdesk	nn	Planlagt
@@ -222,3 +223,28 @@ email_create_account_title	helpdesk	nn	LRS systemtilgang
 email_create_account_message	helpdesk	nn	Systemmelding fra LRS til %1 %2:<br/>Det er opprettet en tilgang for deg i LRS<br/><br/>Du får tilgang til systemet via kommunens intranett.<br/>Under verktøy i høyre kolonne, velg fra LRS listen.<br/>Brukerveiledning finner du i systemet, ved å velge "Hjelp" i toppmenyen.<br/>Har du spørsmål send en e-post til LRS brukerstøtte.<br/>
 choose a section from the menu	helpdesk	nn	Velg en avdeling fra menyen
 please enter value for attribute %1	helpdesk	nn	Vennligst angi verdi for feltet %1
+external communication	helpdesk	nn	Ekstern melding
+internal communication	helpdesk	nn	Intern melding
+comma separated list	helpdesk	nn	Kommaseparert liste
+external communication type	helpdesk	nn	Ekstern meldingstype
+message	helpdesk	nn	Melding
+messages	helpdesk	nn	Meldingar
+message has been saved	helpdesk	nn	Melding er lagra
+who	helpdesk	nn	Kven
+extra mail address	helpdesk	nn	Ekstra adresse
+preview html	helpdesk	nn	Forhåndsvis som HTML
+change category	helpdesk	nn	Flytt saka
+created	helpdesk	nn	Registrert
+internal remark on email	helpdesk	nn	Intern merknad til epost
+recipient set	helpdesk	nn	Adresseliste
+publish text	helpdesk	nn	Publiser tekst
+Check to publish text	helpdesk	nn	Merk av for å publisere til alle
+assignment has been changed for %1	helpdesk	nn	Tildeling er endra for %1
+do you really want to take over the assignment	helpdesk	nn	Vil du ta over oppgåva
+category assignment	helpdesk	nn	Tildeling pr kategori
+category assignment has been saved	helpdesk	nn	Tildeling pr kategori er lagra
+external origin email	helpdesk	nn	Ekstern avsendar
+on behalf of	helpdesk	nn	På vegne av
+category respond messages	helpdesk	nn	Tilbakemeldinger pr kategori
+category respond messages has been saved	helpdesk	nn	Tilbakemeldinger pr kategori er lagra
+include content	helpdesk	nn	Inkluder innhold frå saka

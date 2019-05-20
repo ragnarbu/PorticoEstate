@@ -44,6 +44,7 @@
 		protected $location_id;   // FOREKOMST I MELDINGSREGISTERET
 		protected $location_item_id;  // MELDINGS ID
 		protected $descr;
+		protected $proposed_counter_measure;
 		protected $user_id;
 		protected $entry_date;
 		protected $modified_date;
@@ -57,6 +58,7 @@
 		protected $component_child_item_id; //forekomst av subtype til komponent
 		protected $condition_degree;
 		protected $consequence;
+		protected $case_files = array();
 
 		/**
 		 * Constructor.  Takes an optional ID.  If a contract is created from outside
@@ -127,6 +129,16 @@
 		public function set_descr( $descr )
 		{
 			$this->descr = $descr;
+		}
+
+		public function get_proposed_counter_measure()
+		{
+			return $this->proposed_counter_measure;
+		}
+
+		public function set_proposed_counter_measure( $proposed_counter_measure )
+		{
+			$this->proposed_counter_measure = $proposed_counter_measure;
 		}
 
 		public function get_user_id()
@@ -258,7 +270,15 @@
 		{
 			$this->consequence = $consequence;
 		}
+		public function get_case_files()
+		{
+			return (array)$this->case_files;
+		}
 
+		public function set_case_files( $case_files )
+		{
+			$this->case_files = $case_files;
+		}
 
 		public function validate()
 		{

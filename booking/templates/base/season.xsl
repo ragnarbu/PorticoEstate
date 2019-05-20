@@ -90,9 +90,13 @@
 		var resourceIds = '<xsl:value-of select="season/resource_ids"/>';
 		var lang = <xsl:value-of select="php:function('js_lang', 'Name', 'Account', 'Role', 'Actions', 'Edit', 'Delete', 'Resource Type')"/>;
 	    <![CDATA[
-            var resourcesURL    = 'index.php?menuaction=booking.uiresource.index&sort=name&phpgw_return_as=json&' + resourceIds;
-            var permissionsURL   = 'index.php?menuaction=booking.uipermission_season.index&sort=name&filter_object_id=' + season_id + '&phpgw_return_as=json&';
-	        ]]>
+ //           var resourcesURL    = 'index.php?menuaction=booking.uiresource.index&sort=name&phpgw_return_as=json&' + resourceIds;
+ //           var permissionsURL   = 'index.php?menuaction=booking.uipermission_season.index&sort=name&filter_object_id=' + season_id + '&phpgw_return_as=json&';
+
+			var resourcesURL = phpGWLink('index.php', {menuaction:'booking.uiresource.index', sort:'name', length:-1}, true) + '&' + resourceIds;
+			var permissionsURL = phpGWLink('index.php', {menuaction:'booking.uipermission_season.index', sort:'name', filter_object_id: season_id, length:-1}, true);
+
+	    ]]>
 		var colDefsRespurces = [
 		{key: 'name', label: lang['Name'], formatter: genericLink},
 		{key: 'type', label: lang['Resource Type']}
@@ -102,7 +106,7 @@
 		{key: 'role', label: lang['Role']},
 		{key: 'actions', label: lang['Actions'], formatter: genericLink({name: 'edit', label:lang['Edit']}, {name: 'delete', label:lang['Delete']})}
 		];
-		createTable('resources_container', resourcesURL, colDefsRespurces);
-		createTable('permissions_container', permissionsURL, colDefsPermissions);
+		createTable('resources_container', resourcesURL, colDefsRespurces, '', 'pure-table pure-table-bordered');
+		createTable('permissions_container', permissionsURL, colDefsPermissions, '', 'pure-table pure-table-bordered');
 	</script>
 </xsl:template>

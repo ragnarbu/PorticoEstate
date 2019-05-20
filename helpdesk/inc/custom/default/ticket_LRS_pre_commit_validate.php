@@ -8,117 +8,186 @@
 	 *
 	 * @author Sigurd Nes <sigurdne@online.no>
 	 */
-	class ticket_LRS_pre_commit_validate extends helpdesk_botts
+	if (!class_exists("ticket_LRS_pre_commit_validate"))
 	{
 
-		protected
-			$db,
-			$join,
-			$left_join,
-			$like;
-		function __construct()
+		class ticket_LRS_pre_commit_validate extends helpdesk_botts
 		{
-			parent::__construct();
-			$this->db = & $GLOBALS['phpgw']->db;
-			$this->join = & $this->db->join;
-			$this->left_join = & $this->db->left_join;
-			$this->like = & $this->db->like;
-		}
 
-		/**
-		 * Do your magic
-		 * @param integer $id
-		 * @param array $data
-		 * @param array $values_attribute
-		 */
-		function validate( $id = 0, &$data, $values_attribute = array() )
-		{
-			if($id) // only on add
+			protected
+				$db,
+				$join,
+				$left_join,
+				$like,
+				$socat_assignment;
+			function __construct()
 			{
-				return;
+				parent::__construct();
+				$this->db = & $GLOBALS['phpgw']->db;
+				$this->join = & $this->db->join;
+				$this->left_join = & $this->db->left_join;
+				$this->like = & $this->db->like;
+				$this->socat_assignment = createObject('helpdesk.socat_assignment');
 			}
 
-			if(!empty($data['reverse_id']))
+			/**
+			 * Do your magic
+			 * @param integer $id
+			 * @param array $data
+			 * @param array $values_attribute
+			 */
+			function validate( $id = 0, &$data, $values_attribute = array() )
 			{
-				return true;
-			}
-
-			foreach ($values_attribute as $key => $valueset)
-			{
-				if($valueset['name'] == 'arbeidssted')
+				if($id) // only on add
 				{
-					$org_unit = (int)$valueset['value'];
-					break;
+					return;
 				}
-			}
 
-			$sql = "SELECT arbeidssted FROM fm_org_unit WHERE id = {$org_unit}";
-			$this->db->query($sql);
-			$this->db->next_record();
-			$arbeidssted = (int)$this->db->f('arbeidssted');
-			$category =  CreateObject('phpgwapi.categories', -1, 'helpdesk', '.ticket')->return_single($data['cat_id']);
-			$parent_id =  (int)$category[0]['parent'];
+				if(!empty($data['reverse_id']))
+				{
+					return true;
+				}
 
-			if($parent_id == 255)//LRS-Lønn
-			{
-//				$data['group_id'] = 3159;
-				$location_id = $GLOBALS['phpgw']->locations->get_id('property', ".entity.6.1");
-			}
-			else if($parent_id == 256)//LRS-refusjon
-			{
-//				$data['group_id'] = 3233;
-				$location_id = $GLOBALS['phpgw']->locations->get_id('property', ".entity.6.2");
-			}
-			else if($parent_id == 268)//LRS-Økonomi
-			{
-				$data['group_id'] = 4169;
-			}
-			else if($parent_id == 286)//LRS-Bestilling av endring i UBW
-			{
-				$data['group_id'] = 4173;
-			}
-			else if($parent_id == 301)//LRS-EDD telefon
-			{
-				$data['group_id'] = 4174;
-			}
-			else
-			{
-				$location_id = $GLOBALS['phpgw']->locations->get_id('property', ".entity.6.2");
-			}
+				if(!empty($data['set_user_alternative_lid']))
+				{
+					$helpdesk_account = new helpdesk_account();
+					$helpdesk_account->register_accounts(array
+						(
+							$data['set_user_alternative_lid'] => true
+						)
+					);
+				}
 
-			if($location_id)
-			{
-				$sql = "SELECT json_representation->>'alias' as alias FROM fm_bim_item WHERE location_id = {$location_id}"
-				. " AND CAST(json_representation->>'arbeidssted_start' AS INTEGER) <= {$arbeidssted}"
-				. " AND CAST(json_representation->>'arbeidssted_slutt' AS INTEGER) >= {$arbeidssted}";
+				$org_unit = 0;
+				foreach ($values_attribute as $key => $valueset)
+				{
+					if($valueset['name'] == 'arbeidssted')
+					{
+						$org_unit = (int)$valueset['value'];
+						break;
+					}
+				}
 
+				$sql = "SELECT arbeidssted FROM fm_org_unit WHERE id = {$org_unit}";
 				$this->db->query($sql);
 				$this->db->next_record();
-				$alias = strtolower($this->db->f('alias'));
+				$arbeidssted = (int)$this->db->f('arbeidssted');
+				$category =  CreateObject('phpgwapi.categories', -1, 'helpdesk', '.ticket')->return_single($data['cat_id']);
+				$parent_id =  (int)$category[0]['parent'];
 
-				if(!$data['assignedto'] = $GLOBALS['phpgw']->accounts->name2id($alias))
+				if($parent_id == 255)//LRS-Lønn
 				{
-					$data['assignedto'] = isset($GLOBALS['phpgw_info']['user']['preferences']['helpdesk']['assigntodefault']) ? $GLOBALS['phpgw_info']['user']['preferences']['helpdesk']['assigntodefault'] : '';
+					$data['group_id'] = 3159;
+	//				$location_id = $GLOBALS['phpgw']->locations->get_id('property', ".entity.6.1");
+				}
+				else if($parent_id == 256)//LRS-refusjon
+				{
+					$data['group_id'] = 3233;
+	//				$location_id = $GLOBALS['phpgw']->locations->get_id('property', ".entity.6.2");
+				}
+				else if($parent_id == 268)//LRS-Økonomi
+				{
+					$data['group_id'] = 4169;
+				}
+				else if($parent_id == 286)//LRS-Bestilling av endring i UBW
+				{
+					$data['group_id'] = 4173;
+				}
+				else if($parent_id == 301)//LRS-EDD telefon
+				{
+					$data['group_id'] = 4174;
+				}
+				else
+				{
+					$location_id = $GLOBALS['phpgw']->locations->get_id('property', ".entity.6.2");
 				}
 
-				$current_prefs_user = $this->bocommon->create_preferences('helpdesk',$GLOBALS['phpgw_info']['user']['account_id']);
-				if(empty($current_prefs_user['email']))
+				$group_assignment = $this->socat_assignment->read_single($data['cat_id']);
+
+				if($group_assignment)
 				{
-					$GLOBALS['phpgw']->preferences->add('helpdesk', 'email', "{$GLOBALS['phpgw_info']['user']['account_lid']}@bergen.kommune.no");
-					$GLOBALS['phpgw']->preferences->save_repository();
+					$data['group_id'] = $group_assignment;
 				}
 
-				$assigned_prefs = createObject('phpgwapi.preferences', (int)$data['assignedto']);
-				$assigned_prefs_data = $assigned_prefs->read();
-				if(empty($assigned_prefs_data['helpdesk']['email']))
+				if($location_id && empty($data['group_id']) && $php_sapi_name != 'cli')
 				{
-					$assigned_prefs->add('helpdesk', 'email', "{$alias}@bergen.kommune.no");
-					$assigned_prefs->save_repository();
+					$sql = "SELECT json_representation->>'alias' as alias FROM fm_bim_item WHERE location_id = {$location_id}"
+					. " AND CAST(json_representation->>'arbeidssted_start' AS INTEGER) <= {$arbeidssted}"
+					. " AND CAST(json_representation->>'arbeidssted_slutt' AS INTEGER) >= {$arbeidssted}";
+
+					$this->db->query($sql);
+					$this->db->next_record();
+					$alias = strtolower($this->db->f('alias'));
+
+					if(!$data['assignedto'] = $GLOBALS['phpgw']->accounts->name2id($alias))
+					{
+						$data['assignedto'] = isset($GLOBALS['phpgw_info']['user']['preferences']['helpdesk']['assigntodefault']) ? $GLOBALS['phpgw_info']['user']['preferences']['helpdesk']['assigntodefault'] : '';
+					}
+
+					$current_prefs_user = $this->bocommon->create_preferences('helpdesk',$GLOBALS['phpgw_info']['user']['account_id']);
+					if(empty($current_prefs_user['email']))
+					{
+						$GLOBALS['phpgw']->preferences->add('helpdesk', 'email', "{$GLOBALS['phpgw_info']['user']['account_lid']}@bergen.kommune.no");
+						$GLOBALS['phpgw']->preferences->save_repository();
+					}
+
+					if($data['assignedto'])
+					{
+						$assigned_prefs = createObject('phpgwapi.preferences', (int)$data['assignedto']);
+						$assigned_prefs_data = $assigned_prefs->read();
+						if(empty($assigned_prefs_data['helpdesk']['email']))
+						{
+							$assigned_prefs->add('helpdesk', 'email', "{$alias}@bergen.kommune.no");
+							$assigned_prefs->save_repository();
+						}
+					}
 				}
+
+				return true;
 			}
-
-			return true;
 		}
 	}
+
+	if (!class_exists("helpdesk_account"))
+	{
+		phpgw::import_class('helpdesk.hook_helper');
+
+		class helpdesk_account extends helpdesk_hook_helper
+		{
+
+			public function __construct()
+			{
+				$this->config = CreateObject('phpgwapi.config', 'helpdesk')->read();
+			}
+
+			public function register_accounts( $values )
+			{
+				foreach ($values as $account_lid => $entry)
+				{
+					if (!$GLOBALS['phpgw']->accounts->exists($account_lid))
+					{
+
+						$autocreate_user = isset($this->config['autocreate_user']) && $this->config['autocreate_user'] ? $this->config['autocreate_user'] : 0;
+
+						if ($autocreate_user)
+						{
+							$fellesdata_user = frontend_bofellesdata::get_instance()->get_user($account_lid);
+							if ($fellesdata_user && $fellesdata_user['firstname'])
+							{
+								// Read default assign-to-group from config
+								$default_group_id	 = isset($this->config['autocreate_default_group']) && $this->config['autocreate_default_group'] ? $this->config['autocreate_default_group'] : 0;
+								$group_lid			 = $GLOBALS['phpgw']->accounts->id2lid($default_group_id);
+								$group_lid			 = $group_lid ? $group_lid : 'frontend_delegates';
+
+								$password	 = 'PEre' . mt_rand(100, mt_getrandmax()) . '&';
+								$account_id	 = self::create_phpgw_account($account_lid, $fellesdata_user['firstname'], $fellesdata_user['lastname'], $password, $group_lid);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	$ticket_LRS_pre_commit_validate = new ticket_LRS_pre_commit_validate();
 	$ticket_LRS_pre_commit_validate->validate($id, $data, $values_attribute);

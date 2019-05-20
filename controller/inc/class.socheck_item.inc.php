@@ -128,6 +128,8 @@
 				$control_item = new controller_control_item($this->unmarshal($this->db->f('coi_id'), 'int'));
 				$control_item->set_title($this->db->f('title', true), 'string');
 				$control_item->set_required($this->db->f('required', true), 'string');
+				$control_item->set_include_counter_measure($this->db->f('include_counter_measure', true), 'string');
+				$control_item->set_include_condition_degree($this->db->f('include_condition_degree', true), 'string');
 				$control_item->set_what_to_do($this->db->f('what_to_do', true), 'string');
 				$control_item->set_how_to_do($this->db->f('how_to_do', true), 'string');
 				$control_item->set_control_group_id($this->db->f('control_group_id'), 'int');
@@ -246,6 +248,8 @@
 				$control_item = new controller_control_item($this->unmarshal($this->db->f('coi_id'), 'int'));
 				$control_item->set_title($this->db->f('title', true), 'string');
 				$control_item->set_required($this->db->f('required', true), 'string');
+				$control_item->set_include_counter_measure($this->db->f('include_counter_measure', true), 'string');
+				$control_item->set_include_condition_degree($this->db->f('include_condition_degree', true), 'string');
 				$control_item->set_what_to_do($this->db->f('what_to_do', true), 'string');
 				$control_item->set_how_to_do($this->db->f('how_to_do', true), 'string');
 				$control_item->set_control_group_id($this->db->f('control_group_id'), 'int');
@@ -269,10 +273,10 @@
 		 * @param	$messageStatus is there a message registered for the case
 		 * @return check item objects
 		 */
-		public function get_check_items_with_cases( $check_list_id, $type = "control_item_type_1", $status = "open", $messageStatus = null, $location_code = null )
+		public function get_check_items_with_cases( $check_list_id, $type = "control_item_type_1", $status = "open", $messageStatus = null, $location_code = null, $component_id = null )
 		{
 			$check_list_id = (int)$check_list_id;
-			$sql = "SELECT ci.id as ci_id, control_item_id, check_list_id, cic.component_location_id,";
+			$sql = "SELECT DISTINCT ci.id as ci_id, control_item_id, check_list_id, cic.component_location_id,";
 			$sql .= "cic.id as cic_id, cic.status as cic_status, cic.*, ";
 			$sql .= "coi.id as coi_id, coi.* ";
 			//	$sql .= "FROM controller_check_item ci ";
@@ -282,7 +286,25 @@
 
 			$sql .= "LEFT JOIN controller_control_item as coi ON ci.control_item_id = coi.id ";
 			$sql .= "LEFT JOIN controller_check_item_case as cic ON ci.id = cic.check_item_id ";
-			$sql .= "WHERE ci.check_list_id = {$check_list_id} ";
+
+			if($status == 'open_or_waiting_old')
+			{
+				$sql .= "WHERE ci.check_list_id != {$check_list_id} ";
+				$sql .= "AND (cic.status = 0 OR cic.status = 2) ";
+				$sql .= "AND (cic.status = 0 OR cic.status = 2) ";
+				if($component_id)
+				{
+					$sql .= "AND cic.component_id = " . (int) $component_id . " ";
+				}
+				else if (!$location_code)
+				{
+					return array();
+				}
+			}
+			else
+			{
+				$sql .= "WHERE ci.check_list_id = {$check_list_id} ";
+			}
 
 			if ($status == 'open')
 			{
@@ -346,6 +368,8 @@
 					$control_item = new controller_control_item($this->unmarshal($this->db->f('coi_id'), 'int'));
 					$control_item->set_title($this->db->f('title', true), 'string');
 					$control_item->set_required($this->db->f('required', true), 'string');
+					$control_item->set_include_counter_measure($this->db->f('include_counter_measure', true), 'string');
+					$control_item->set_include_condition_degree($this->db->f('include_condition_degree', true), 'string');
 					$control_item->set_what_to_do($this->db->f('what_to_do', true), 'string');
 					$control_item->set_how_to_do($this->db->f('how_to_do', true), 'string');
 					$control_item->set_control_group_id($this->db->f('control_group_id'), 'int');
@@ -364,6 +388,7 @@
 					$case->set_location_id($this->unmarshal($this->db->f('location_id'), 'int'));
 					$case->set_location_item_id($this->unmarshal($this->db->f('location_item_id'), 'int'));
 					$case->set_descr($this->unmarshal($this->db->f('descr', true), 'string'));
+					$case->set_proposed_counter_measure($this->unmarshal($this->db->f('proposed_counter_measure', true), 'string'));
 					$case->set_user_id($this->unmarshal($this->db->f('user_id'), 'int'));
 					$case->set_entry_date($this->unmarshal($this->db->f('entry_date'), 'int'));
 					$case->set_modified_date($this->unmarshal($this->db->f('modified_date'), 'int'));
@@ -433,6 +458,8 @@
 					$control_item = new controller_control_item($this->unmarshal($this->db->f('coi_id'), 'int'));
 					$control_item->set_title($this->db->f('title', true), 'string');
 					$control_item->set_required($this->db->f('required', true), 'string');
+					$control_item->set_include_counter_measure($this->db->f('include_counter_measure', true), 'string');
+					$control_item->set_include_condition_degree($this->db->f('include_condition_degree', true), 'string');
 					$control_item->set_what_to_do($this->db->f('what_to_do', true), 'string');
 					$control_item->set_how_to_do($this->db->f('how_to_do', true), 'string');
 					$control_item->set_control_group_id($this->db->f('control_group_id'), 'int');

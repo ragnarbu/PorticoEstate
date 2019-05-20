@@ -22,7 +22,7 @@
 
 	// Note: This is current not a drop in install, it requires some manual installation
 	//       Take a look at the README file
-	$domain = isset($_REQUEST['logindomain']) && $_REQUEST['logindomain'] ? $_REQUEST['logindomain'] : 'default';
+	$domain = !empty($_REQUEST['logindomain']) ? $_REQUEST['logindomain'] : 'default';
 	$template_set = 'checkwithmom';
 
 
@@ -171,7 +171,7 @@ HTML;
 	  \************************************************************************ */
 	if (!isset($GLOBALS['phpgw_info']['flags']['disable_Template_class']) || !$GLOBALS['phpgw_info']['flags']['disable_Template_class'])
 	{
-		$GLOBALS['phpgw']->template = createObject('phpgwapi.Template', PHPGW_APP_TPL);
+		$GLOBALS['phpgw']->template = createObject('phpgwapi.template', PHPGW_APP_TPL);
 		$GLOBALS['phpgw']->xslttpl = createObject('phpgwapi.xslttemplates', PHPGW_APP_TPL);
 	}
 

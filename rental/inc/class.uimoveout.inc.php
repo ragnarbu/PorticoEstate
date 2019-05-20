@@ -284,7 +284,7 @@
 		 * (non-PHPdoc)
 		 * @see phpgwapi/inc/phpgwapi_uicommon#query()
 		 */
-		public function query()
+		public function query($relaxe_acl = false)
 		{
 			$params = $this->bo->build_default_read_params();
 			$values = $this->bo->read($params);
@@ -315,9 +315,9 @@
 		 *
 		 * @return void
 		 */
-		protected function _handle_files( $id )
-		{
-			parent::_handle_files('rental', 'moveout', $id);
-		}
+//		protected function _handle_files( $id )
+//		{
+//			parent::_handle_files('rental', 'moveout', $id);
+//		}
 
 	}

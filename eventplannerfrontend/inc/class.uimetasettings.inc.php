@@ -46,11 +46,27 @@
 		public function __construct()
 		{
 			parent::__construct();
+
+			$is_admin = $GLOBALS['phpgw']->acl->check('run', phpgwapi_acl::READ, 'admin');
+			$local_admin = false;
+			if(!$is_admin)
+			{
+				if($GLOBALS['phpgw']->acl->check('admin', phpgwapi_acl::ADD, 'eventplannerfrontend'))
+				{
+					$local_admin = true;
+				}
+			}
+
+			if(!$is_admin && !$local_admin)
+			{
+				phpgw::no_access();
+			}
+
 			$GLOBALS['phpgw_info']['flags']['app_header'] .= '::' . lang('metasettings');
 			$this->fields = eventplanner_metasettings::get_fields();
 			$this->permissions = eventplanner_metasettings::get_instance()->get_permission_array();
 			$this->currentapp = $GLOBALS['phpgw_info']['flags']['currentapp'];
-			self::set_active_menu("{$this->currentapp}::metasettings");
+			self::set_active_menu("admin::{$this->currentapp}::metasettings");
 		}
 
 		public function index()
@@ -67,6 +83,11 @@
 
 			if ($_SERVER['REQUEST_METHOD'] == 'POST')
 			{
+				if(!$GLOBALS['phpgw']->acl->check('admin', phpgwapi_acl::ADD, $appname))
+				{
+					phpgw::no_access();
+				}
+
 				$metasettings = new eventplanner_metasettings();
 				$this->populate($metasettings);
 

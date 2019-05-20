@@ -2398,3 +2398,7 @@ messages	property	no	Meldinger
 message has been saved	property	no	Melding er lagret
 who	property	no	Hvem
 representative	property	no	Representativ
+has been closed	property	no	er avsluttet
+persistent	property	no	Permanent
+external id	property	no	Ekstern ID
+mail recipients	property	no	Mailmottaker

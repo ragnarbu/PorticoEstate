@@ -51,11 +51,6 @@
 
 
 	$stylesheets = array();
-	// added aalesund stylesheet
-	$stylesheets[] = "/phpgwapi/templates/aalesund/bootstrap/css/bootstrap.min.css";
-	$stylesheets[] = "/phpgwapi/templates/aalesund/css/bootstrap.css";
-	$stylesheets[] = "/phpgwapi/templates/aalesund/css/ionicons.css";
-
 //	$stylesheets[] = "/phpgwapi/js/materialize/css/materialize.min.css";
 	$stylesheets[] = "/phpgwapi/templates/pure/css/global.css";
 //	$stylesheets[] = "/phpgwapi/templates/pure/css/demo_mmenu.css";
@@ -168,6 +163,7 @@ HTML;
 		'site_title'	=> "{$GLOBALS['phpgw_info']['server']['site_title']}",
 		'str_base_url'	=> $GLOBALS['phpgw']->link('/', array(), true),
 		'webserver_url'	=> $webserver_url,
+		'userlang'		=> $GLOBALS['phpgw_info']['user']['preferences']['common']['lang'],
 		'win_on_events'	=> $GLOBALS['phpgw']->common->get_on_events(),
 		'border_layout_config' => $_border_layout_config,
 		'navbar_config' => $_navbar_config,

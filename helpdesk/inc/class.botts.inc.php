@@ -48,9 +48,10 @@
 		var $fields_updated = false;
 		var $status_id;
 		var $user_id;
-		var $part_of_town_id;
-		var $district_id;
+		var $group_id;
 		var $total_records;
+		var $use_session;
+		var $_simple, $_group_candidates, $_show_finnish_date;
 
 		var $public_functions = array
 			(
@@ -59,7 +60,7 @@
 				'save'			=> true,
 			);
 
-		function __construct()
+		function __construct($read_session = false)
 		{
 			$this->so 					= CreateObject('helpdesk.sotts');
 			$this->custom				= & $this->so->custom;
@@ -73,20 +74,117 @@
 
 			$this->config->read();
 
+			if ($read_session)
+			{
+				$this->read_sessiondata();
+				$this->use_session = True;
+			}
 			$this->start = phpgw::get_var('start', 'int', 'REQUEST', 0);
 			$this->query = phpgw::get_var('query');
 			$this->sort = phpgw::get_var('sort');
 			$this->order = phpgw::get_var('order');
 			$this->status_id = phpgw::get_var('status_id', 'string');
-			$this->user_id = phpgw::get_var('user_id', 'int');
+			$user_id = phpgw::get_var('user_id', 'int');
+			$group_id = phpgw::get_var('group_id', 'int');
+
+			if(isset($_POST))
+			{
+				$this->user_id	= $user_id;
+			}
+			if(isset($_REQUEST['group_id']))
+			{
+				$this->group_id	= $group_id;
+			}
+
 			$this->reported_by = phpgw::get_var('reported_by', 'int');
 			$this->cat_id = phpgw::get_var('cat_id', 'int');
 			$this->parent_cat_id = phpgw::get_var('parent_cat_id', 'int');
 			$this->allrows = phpgw::get_var('allrows', 'bool');
 			$this->start_date = phpgw::get_var('filter_start_date', 'string');
 			$this->end_date = phpgw::get_var('filter_end_date', 'string');
+
+			$default_interface = isset($this->config->config_data['tts_default_interface']) ? $this->config->config_data['tts_default_interface'] : '';
+
+			/*
+			 * Inverted logic
+			 */
+			if($default_interface == 'simplified')
+			{
+				$this->_simple = true;
+			}
+
+			$user_groups =  $GLOBALS['phpgw']->accounts->membership($this->account);
+			$simple_group = isset($this->config->config_data['fmttssimple_group']) ? $this->config->config_data['fmttssimple_group'] : array();
+			foreach ($user_groups as $group => $dummy)
+			{
+				if (in_array($group, $simple_group))
+				{
+					if($default_interface == 'simplified')
+					{
+						$this->_simple = false;
+					}
+					else
+					{
+						$this->_simple = true;
+					}
+					break;
+				}
+			}
+			if (isset($this->config->config_data['fmtts_assign_group_candidates']) && is_array($this->config->config_data['fmtts_assign_group_candidates']))
+			{
+				foreach ($this->config->config_data['fmtts_assign_group_candidates'] as $group_candidate)
+				{
+					if ($group_candidate)
+					{
+						$this->_group_candidates[] = $group_candidate;
+					}
+				}
+			}
+
+			reset($user_groups);
+
+			foreach ( $user_groups as $group => $dummy)
+			{
+				if ( in_array($group, $this->_group_candidates))
+				{
+					$this->_simple = false;
+					break;
+				}
+			}
+
+			reset($user_groups);
+			$group_finnish_date = isset($this->config->config_data['fmtts_group_finnish_date']) ? $this->config->config_data['fmtts_group_finnish_date'] : array();
+			foreach ( $user_groups as $group => $dummy)
+			{
+				if ( in_array($group, $group_finnish_date))
+				{
+					$this->_show_finnish_date = true;
+					break;
+				}
+			}
 		}
 
+
+		function save_sessiondata($data)
+		{
+			if ($this->use_session)
+			{
+				$data = phpgwapi_cache::session_set('helpdesk', 'session_data',$data);
+			}
+		}
+
+		function read_sessiondata()
+		{
+			$data = phpgwapi_cache::session_get('helpdesk', 'session_data');
+
+			if(empty($data) || !is_array($data))
+			{
+				return;
+			}
+
+			$this->user_id	= $data['user_id'];
+			$this->group_id	= $data['group_id'];
+		}
 
 		function column_list( $selected = array() )
 		{
@@ -175,6 +273,18 @@
 					$this->custom_filters[] = $custom_col['column_name'];
 				}
 			}
+
+			$columns['details'] = array
+				(
+				'id' => 'details',
+				'name' => lang('details')
+			);
+			$columns['external_origin_email'] = array
+				(
+				'id' => 'external_origin_email',
+				'name' => lang('external origin email')
+			);
+
 			return $columns;
 		}
 
@@ -312,6 +422,18 @@
 			return $category[0]['name'];
 		}
 
+		function get_category_path($cat_id)
+		{
+			$path_array = $this->cats->get_path($cat_id);
+
+			$path = array();
+			foreach ($path_array as $entry)
+			{
+				$path[] = $entry['name'];
+			}
+
+			return implode('::', $path);
+		}
 
 		function get_origin_entity_type()
 		{
@@ -367,6 +489,8 @@
 			$this->sum_actual_cost = $this->so->sum_actual_cost;
 			$this->sum_difference = $this->so->sum_difference;
 
+			$selected_columns = !empty($GLOBALS['phpgw_info']['user']['preferences']['helpdesk']['ticket_columns']) ? $GLOBALS['phpgw_info']['user']['preferences']['helpdesk']['ticket_columns'] : array();
+
 			$custom_status = $this->so->get_custom_status();
 			$closed_status = array('X');
 			foreach ($custom_status as $custom)
@@ -379,6 +503,21 @@
 
 			foreach ($tickets as & $ticket)
 			{
+				if(in_array('details', $selected_columns))
+				{
+					$i = 1;
+					$ticket['details'] = "#{$i}: {$ticket['details']}";
+					$additional_notes = $this->read_additional_notes((int)$ticket['id'] );
+					foreach ($additional_notes as $additional_note)
+					{
+						if($additional_note['value_publish'])
+						{
+							$i++;
+							$ticket['details'] .= "<br/><br/>#$i: {$additional_note['value_note']}";
+						}
+					}
+				}
+
 				if (!isset($category_name[$ticket['cat_id']]))
 				{
 					$category_name[$ticket['cat_id']] = $this->get_category_name($ticket['cat_id']);
@@ -583,6 +722,7 @@
 
 			foreach ($history_array as $value)
 			{
+				$record_history[$i]['value_id']	= $i+1;
 				$record_history[$i]['value_date']	= $GLOBALS['phpgw']->common->show_date($value['datetime']);
 				$record_history[$i]['value_user']	= $value['owner'];
 
@@ -647,8 +787,8 @@
 				}
 				else if ($value['status'] == 'T')
 				{
-					$record_history[$i]['value_new_value']	= $this->get_category_name($value['new_value']);
-					$record_history[$i]['value_old_value']	= $this->get_category_name($value['old_value']);
+					$record_history[$i]['value_new_value']	= $this->get_category_path($value['new_value']);
+					$record_history[$i]['value_old_value']	= $this->get_category_path($value['old_value']);
 				}
 				else if ($value['status'] == 'FW')
 				{
@@ -675,9 +815,110 @@
 			return $record_history;
 		}
 
-		function add( $data, $values_attribute = array() )
+		/**
+		 * Simplified method for adding tickets from external apps
+		 * 	$data = array
+		 * 	(
+		 * 		'assignedto' 		=> $assignedto,
+		 * 		'group_id' 			=> $group_id,
+		 *		'origin' 			=> $location_id,
+		 * 		'origin_id'			=> $location_item_id,
+		 * 		'cat_id'			=> $cat_id,
+		 * 		'priority'			=> $priority, //optional (1-3)
+		 * 		'title'				=> $title,
+		 * 		'details'			=> $details,
+		 * 		'file_input_name'	=> 'file' // default, optional
+		 * 	);
+		 *
+		 */
+		function add_ticket( $data )
 		{
 
+			$cancel_attachment = empty($data['cancel_attachment']) ? false : true;
+
+			$group_or_user = '';
+			$assignedto = $data['assignedto'];
+			if($assignedto)
+			{
+				$group_or_user = get_class($GLOBALS['phpgw']->accounts->get($assignedto));
+			}
+
+			if($group_or_user == "phpgwapi_group")
+			{
+				$data['group_id'] = !empty($data['group_id']) ? $data['group_id'] : $assignedto;
+				$assignedto = 0;
+			}
+
+
+			if (!$assignedto)
+			{
+				$default_group = (int)$this->config->config_data['tts_default_group'];
+			}
+			else
+			{
+				$default_group = 0;
+			}
+
+			$priority_list = $this->get_priority_list();
+
+			$default_priority = isset($GLOBALS['phpgw_info']['user']['preferences']['property']['prioritydefault']) ? $GLOBALS['phpgw_info']['user']['preferences']['property']['prioritydefault'] : count($priority_list);
+
+			$ticket = array
+			(
+				'origin_id' => isset($data['origin_id']) ? $data['origin_id'] : null,
+				'origin_item_id' => isset($data['origin_item_id']) ? $data['origin_item_id'] : null,
+				'cat_id' => $data['cat_id'],
+				'group_id' => isset($data['group_id']) && $data['group_id'] ? $data['group_id'] : $default_group,
+				'assignedto' => $assignedto,
+				'priority' => isset($data['priority']) && $data['priority'] ? $data['priority'] : $default_priority,
+				'status' => 'O', // O = Open
+				'subject' => $data['title'],
+				'details' => $data['details'],
+				'apply' => true,
+				'contact_id' => 0,
+				'send_mail'		=> true,
+				'external_ticket_id' => !empty($data['external_ticket_id']) ? $data['external_ticket_id'] : null,
+				'external_origin_email' => !empty($data['external_origin_email']) ? $data['external_origin_email'] : null,
+			);
+
+			$result = $this->add($ticket);
+
+			// Files
+			$file_input_name = isset($data['file_input_name']) && $data['file_input_name'] ? $data['file_input_name'] : 'file';
+
+			$file_name = @str_replace(' ', '_', $_FILES[$file_input_name]['name']);
+			if (!$cancel_attachment && $file_name && $result['id'])
+			{
+				$bofiles = CreateObject('property.bofiles', '/helpdesk');
+				$to_file = "{$bofiles->fakebase}/{$result['id']}/{$file_name}";
+
+				if ($bofiles->vfs->file_exists(array(
+						'string' => $to_file,
+						'relatives' => array(RELATIVE_NONE)
+					)))
+				{
+					$msglog['error'][] = array('msg' => lang('This file already exists !'));
+				}
+				else
+				{
+					$bofiles->create_document_dir("{$result['id']}");
+					$bofiles->vfs->override_acl = 1;
+
+					if (!$bofiles->vfs->cp(array(
+							'from' => $_FILES[$file_input_name]['tmp_name'],
+							'to' => $to_file,
+							'relatives' => array(RELATIVE_NONE | VFS_REAL, RELATIVE_ALL))))
+					{
+						$msglog['error'][] = array('msg' => lang('Failed to upload file!'));
+					}
+					$bofiles->vfs->override_acl = 0;
+				}
+			}
+			return (int)$result['id'];
+		}
+
+		function add( $data, $values_attribute = array() )
+		{
 			$data['finnish_date'] = $this->bocommon->date_to_timestamp($data['finnish_date']);
 
 			if ($values_attribute && is_array($values_attribute))
@@ -707,6 +948,11 @@
 				{
 					require $file;
 				}
+			}
+
+			if( !empty($data['set_user_alternative_lid']))
+			{
+				$data['set_user_id'] = $GLOBALS['phpgw']->accounts->name2id($data['set_user_alternative_lid']);
 			}
 
 			$receipt = $this->so->add($data, $values_attribute);
@@ -811,10 +1057,6 @@
 			// build subject
 			$subject = '['.lang('Ticket').' #'.$id.'] : ' . $this->get_category_name($ticket['cat_id']) . '; ' .$ticket['subject'];
 
-			$prefs_user = $this->bocommon->create_preferences('helpdesk',$ticket['user_id']);
-
-			$from_address=$prefs_user['email'];
-
 			//-----------from--------
 
 			$current_prefs_user = $this->bocommon->create_preferences('helpdesk',$GLOBALS['phpgw_info']['user']['account_id']);
@@ -839,28 +1081,92 @@
 			$link_text = lang('Ticket') . ' #' . $id ;
 
 			$messages_sendt = $this->historylog->return_array(array(),array('M'),'history_timestamp','DESC',$id);
-			$additional_notes = $this->read_additional_notes($id);
-			$num_updates = count($additional_notes) +1;
+			$_additional_notes = $this->read_additional_notes($id);
+
+			$notes = array(
+				array(
+					'value_id' => '', //not from historytable
+					'value_count' => 1,
+					'value_date' => $GLOBALS['phpgw']->common->show_date($ticket['timestamp']),
+					'value_user' => $ticket['reverse_id']? $ticket['reverse_name'] : $ticket['user_name'],
+					'value_note' => $ticket['details'],
+					'value_publish' => $ticket['publish_note']
+				)
+			);
+
+			$_additional_notes = array_merge($notes, $_additional_notes);
+
+			$additional_notes = array();
+
+			if ($this->_simple)
+			{
+				$i = 1;
+				foreach ($_additional_notes as $note)
+				{
+					if ($note['value_publish'])
+					{
+						$note['value_count'] = $i++;
+						$additional_notes[] = $note;
+					}
+				}
+			}
+			else
+			{
+				$i = 0;
+				$j = 1;
+				foreach ($_additional_notes as $note)
+				{
+					if ($note['value_publish'])
+					{
+						$i++;
+						$j = 1;
+					}
+					else
+					{
+						if($i)
+						{
+							$j++;
+						}
+					}
+					$i = max(array(1, $i));
+					$note['value_count'] = "{$i}.{$j}";
+					$additional_notes[] = $note;
+				}
+			}
+
+
+			$num_updates = count($additional_notes);
+
+			$category_path = $this->cats->get_path($ticket['cat_id']);
+			$category_parent = $category_path[0]['id'];
+
+			$cat_respond_messages = createObject('helpdesk.socat_respond_messages')->read();
+
+			$config_new_message = $cat_respond_messages[$category_parent]['new_message'] ? $cat_respond_messages[$category_parent]['new_message'] : $this->config->config_data['new_message'];
+			$config_set_user_message = $cat_respond_messages[$category_parent]['set_user_message'] ? $cat_respond_messages[$category_parent]['set_user_message'] : $this->config->config_data['set_user_message'];
+			$config_update_message = $cat_respond_messages[$category_parent]['update_message'] ? $cat_respond_messages[$category_parent]['update_message'] : $this->config->config_data['update_message'];
+			$config_close_message = $cat_respond_messages[$category_parent]['close_message'] ? $cat_respond_messages[$category_parent]['close_message'] : $this->config->config_data['close_message'];
+
 
 			//New message
-			if(!$get_message && !empty($this->config->config_data['new_message']))
+			if(!$get_message && !empty($config_new_message))
 			{
-				$link_text = "<H2>{$this->config->config_data['new_message']}</H2>";
+				$link_text = "<H2>{$config_new_message}</H2>";
 				$link_text = nl2br(str_replace(array('__ID__'), array($id), $link_text));
 			}
 
 			$set_user_id = false;
-			if(!$get_message && !empty($this->config->config_data['set_user_message']) && $_POST['values']['set_user_id'])
+			if(!$get_message && !empty($config_set_user_message) && $_POST['values']['set_user_id'])
 			{
 				$set_user_id = (int) $_POST['values']['set_user_id'];
-				$link_text = "<H2>{$this->config->config_data['set_user_message']}</H2>";
+				$link_text = "<H2>{$config_set_user_message}</H2>";
 				$link_text = nl2br(str_replace(array('__ID__'), array($id), $link_text));
 			}
 
 			// Normal update message
-			if(!$get_message && !empty($this->config->config_data['update_message']) && $messages_sendt && !$set_user_id)
+			if(!$get_message && !empty($config_update_message) && $messages_sendt && !$set_user_id)
 			{
-				$link_text = "<H2>{$this->config->config_data['update_message']}</H2>";
+				$link_text = "<H2>{$config_update_message}</H2>";
 				$link_text = nl2br(str_replace(array('__ID__', '__#__'), array($id, $num_updates), $link_text));
 			}
 
@@ -873,9 +1179,9 @@
 
 
 			//Message when ticket is closed
-			if(!$get_message && !empty($this->config->config_data['close_message']) && $status_closed[$ticket['status']])
+			if(!$get_message && !empty($config_close_message) && $status_closed[$ticket['status']])
 			{
-				$link_text = "<H4>{$this->config->config_data['close_message']}</H4>";
+				$link_text = "<H4>{$config_close_message}</H4>";
 				$link_text = nl2br(str_replace(array('__ID__', '__#__'), array($id, $num_updates), $link_text));
 			}
 
@@ -939,7 +1245,7 @@
 			$body .= '</table>';
 
 
-			if($get_message)
+			if($get_message || !empty($cat_respond_messages[$category_parent]['include_content']))
 			{
 				$i = 1;
 				$lang_date = lang('date');
@@ -964,7 +1270,7 @@
 				</thead>
 HTML;
 
-				$table_content .= "<tr><td style='vertical-align:top'>{$i}</td><td style='vertical-align:top'>{$entry_date}</td><td style='vertical-align:top'>{$user_name}</td><td style='white-space: pre-line'>{$ticket['details']}</td></tr>";
+			//	$table_content .= "<tr><td style='vertical-align:top'>{$i}</td><td style='vertical-align:top'>{$entry_date}</td><td style='vertical-align:top'>{$user_name}</td><td style='white-space: pre-line'>{$ticket['details']}</td></tr>";
 
 				foreach ($additional_notes as $value)
 				{
@@ -1124,6 +1430,18 @@ HTML;
 			}
 			unset($entry);
 
+
+			if(!empty($this->config->config_data['from_email']))
+			{
+				$from_address = $this->config->config_data['from_email'];
+				$from_name = 'NoReply';
+			}
+			else
+			{
+				$from_address = $current_user_address;
+				$from_name = $GLOBALS['phpgw_info']['user']['fullname'];			
+			}
+
 			$rc = false;
 			if($toarray)
 			{
@@ -1133,7 +1451,7 @@ HTML;
 				{
 					try
 					{
-						$rc = $this->send->msg('email', $to, $subject, $html, '', $cc, $bcc,$current_user_address,$GLOBALS['phpgw_info']['user']['fullname'],'html');
+						$rc = $this->send->msg('email', $to, $subject, $html, '', $cc, $bcc,$from_address, $from_name,'html');
 					}
 					catch (Exception $e)
 					{
@@ -1170,6 +1488,12 @@ HTML;
 			return $this->so->get_custom_status();
 		}
 
+		public function take_over($id = 0)
+		{
+			$receipt 	= $this->so->take_over($id);
+			$this->fields_updated = $this->so->fields_updated;
+			return $receipt;
+		}
 		public function update_status($data, $id = 0)
 		{
 			$receipt 	= $this->so->update_status($data, $id);
@@ -1254,6 +1578,7 @@ HTML;
 			$values = $this->custom->prepare($values, 'helpdesk', '.ticket', false);
 			return $values;
 		}
+
 		function get_group_list( $selected = 0 )
 		{
 			$query = '';
@@ -1297,4 +1622,13 @@ HTML;
 			}
 		}
 
+		public function get_assigned_groups2($selected)
+		{
+			return $this->so->get_assigned_groups2($selected);
+		}
+
+		function reset_views($id)
+		{
+			return $this->so->reset_views($id);
+		}
 	}

@@ -23,10 +23,27 @@
 
 		function show()
 		{
+			$ssn = (string)$_SERVER['HTTP_UID'];
 			$id = phpgw::get_var('id', 'int');
+			$secret =  phpgw::get_var('secret', 'string');
+
+			/**
+			 * check external login - and return here
+			 */
+			$bouser = CreateObject('bookingfrontend.bouser');
+
+			$bouser->validate_ssn_login(
+				array
+				(
+					'menuaction' => 'bookingfrontend.uiapplication.show',
+					'id'		=> $id,
+					'secret'	=> $secret
+				)
+			);
+
 			$application = $this->bo->read_single($id);
 
-			if ($application['secret'] != phpgw::get_var('secret', 'string'))
+			if ($application['secret'] != $secret)
 			{
 				$this->redirect(array('menuaction' => 'bookingfrontend.uisearch.index'));
 			}
@@ -146,16 +163,12 @@
 
 			phpgwapi_jquery::formvalidator_generate(array('file'), 'file_form');
 
-			$config = CreateObject('phpgwapi.config', 'booking');
-			$config->read();
-			$application_text = $config->config_data;
-
 			self::render_template_xsl('application', array(
 				'application' => $application,
 				'audience' => $audience,
 				'agegroups' => $agegroups,
 				'frontend' => 'true',
-				'config' => $application_text
+				'config' => CreateObject('phpgwapi.config', 'booking')->read()
 				)
 			);
 		}

@@ -54,7 +54,9 @@
 				'activities' => 'int',
 				'facilities' => 'int',
 			);
-			self::set_active_menu('booking::buildings::resources');
+			self::set_active_menu('booking::buildings::resources::resources');
+			$this->display_name = lang('resources');
+			$GLOBALS['phpgw_info']['flags']['app_header'] = lang('booking') . "::{$this->display_name}";
 		}
 
 		public function index()
@@ -65,6 +67,7 @@
 			}
 
 			$data = array(
+				'datatable_name' => $this->display_name,
 				'form' => array(
 					'toolbar' => array(
 						'item' => array(
@@ -474,7 +477,7 @@
 
 			$_filter_building['id'] = array_merge(array(-1), $resource['buildings']);
 
-			$bui_result = $this->sobuilding->read(array("sort" => "name", "dir" => "asc",
+			$bui_result = $this->sobuilding->read(array('results' => -1, "sort" => "name", "dir" => "asc",
 				"filters" => $_filter_building));
 
 			return $this->jquery_results($bui_result);
@@ -546,7 +549,7 @@
 
 			$_filter_building['id'] = array_merge(array(-1), $resource['buildings']);
 
-			$bui_result = $this->sobuilding->read(array("sort" => "name", "dir" => "asc",
+			$bui_result = $this->sobuilding->read(array('results' => -1, "sort" => "name", "dir" => "asc",
 				"filters" => $_filter_building));
 
 			// Create text strings for the activity and facility lists

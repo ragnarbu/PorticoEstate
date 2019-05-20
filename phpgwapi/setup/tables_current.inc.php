@@ -106,7 +106,7 @@
 			'fd' => array(
 				'preference_owner' => array('type' => 'int','precision' => 4,'nullable' => False),
 				'preference_app' => array('type' => 'varchar','precision' => 25,'nullable' => False),
-				'preference_value' => array('type' => 'text','nullable' => False)
+				'preference_json' => array('type' => 'jsonb','nullable' => False)
 			),
 			'pk' => array('preference_owner','preference_app'),
 			'fk' => array(),
@@ -612,6 +612,7 @@
 				'search' => array('type' => 'int','precision' => 2,'nullable' => true),
 				'history' => array('type' => 'int','precision' => 2,'nullable' => true),
 				'list' => array('type' => 'int','precision' => 4,'nullable' => true),
+				'table_filter' => array('type' => 'int','precision' => 2,'nullable' => true),
 				'attrib_sort' => array('type' => 'int','precision' => 4,'nullable' => true),
 				'size' => array('type' => 'int','precision' => 4,'nullable' => true),
 				'precision_' => array('type' => 'int','precision' => 4,'nullable' => true),

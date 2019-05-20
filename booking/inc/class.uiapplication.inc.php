@@ -50,11 +50,14 @@
 			$this->document_building = CreateObject('booking.bodocument_building');
 			$this->document_resource = CreateObject('booking.bodocument_resource');
 
-			self::set_active_menu('booking::applications');
+			self::set_active_menu('booking::applications::applications');
 			$this->fields = array('formstage', 'name', 'organizer', 'homepage', 'description', 'equipment', 'resources',
 				'activity_id', 'building_id', 'building_name', 'contact_name',
 				'contact_email', 'contact_phone', 'audience',
 				'active', 'accepted_documents', 'responsible_street', 'responsible_zip_code', 'responsible_city');
+
+			$this->display_name = lang('application');
+			$GLOBALS['phpgw_info']['flags']['app_header'] = lang('booking') . "::{$this->display_name}";
 		}
 		// --- SIGURD::START EXAMPLE -- //
 
@@ -257,7 +260,7 @@
 			phpgwapi_jquery::load_widget('autocomplete');
 
 			$data = array(
-				'datatable_name' => lang('application'),
+				'datatable_name' => $this->display_name,
 				'form' => array(
 					'toolbar' => array(
 						'item' => array(
@@ -367,6 +370,7 @@
 				),
 			);
 
+
 			$data['datatable']['new_item'] = self::link(array('menuaction' => 'booking.uiapplication.add'));
 			$data['datatable']['actions'][] = array();
 
@@ -458,7 +462,7 @@
 				$application['created'] = pretty_timestamp($application['created']);
 				$application['modified'] = pretty_timestamp($application['modified']);
 				$application['frontend_modified'] = pretty_timestamp($application['frontend_modified']);
-				$application['resources'] = $this->resource_bo->so->read(array('filters' => array(
+				$application['resources'] = $this->resource_bo->so->read(array('results' =>'all', 'filters' => array(
 						'id' => $application['resources'])));
 				$application['resources'] = $application['resources']['results'];
 				if ($application['resources'])
@@ -579,10 +583,7 @@
 
 		public function add()
 		{
-			$config = CreateObject('phpgwapi.config', 'booking');
-			$config->read();
 			$orgnr = phpgwapi_cache::session_get($this->module, self::ORGNR_SESSION_KEY);
-			$application_text = $config->config_data;
 
 			$errors = array();
 
@@ -612,6 +613,7 @@
 				$application['created'] = 'now';
 				$application['modified'] = 'now';
 				$application['secret'] = $this->generate_secret();
+//				$application['secret_timestamp'] = time();
 				$application['owner_id'] = $GLOBALS['phpgw_info']['user']['account_id'];
 				$application['building_name'] = $building['results'][0]['name'];
 
@@ -642,6 +644,10 @@
 					$application['responsible_zip_code'] = '0000';
 					$application['customer_identifier_type'] = 'organization_number';
 					$application['customer_organization_number'] = '000000000';
+				}
+				else if(isset($application['formstage']) && $application['formstage'] == 'legacy')
+				{
+					$application['name'] = $application['description'] ;
 				}
 
 				$errors = $this->validate($application);
@@ -866,6 +872,21 @@
 				$date['to_'] = pretty_timestamp($date['to_']);
 			}
 
+
+			if (phpgw::get_var('phpgw_return_as', 'string', 'GET') == 'json' )
+			{
+				echo json_encode(array(
+						'application' => $application,
+						'activities' => $activities,
+						'agegroups' => $agegroups,
+						'audience' => $audience
+					)
+				);
+
+				$GLOBALS['phpgw']->common->phpgw_exit();
+			}
+
+
 //			$GLOBALS['phpgw']->jqcal->add_listener('start_date', 'datetime');
 //			$GLOBALS['phpgw']->jqcal->add_listener('end_date', 'datetime');
 			$GLOBALS['phpgw']->jqcal2->add_listener('start_date', 'datetime', !empty($default_dates) ? strtotime($default_dates[0]['from_']) :0);
@@ -883,6 +904,7 @@
 			else
 			{
 				self::add_javascript('bookingfrontend', 'base', 'application.js');
+				self::add_javascript('bookingfrontend', 'base', 'application_new.js', 'text/javascript', true);
 			}
 
 			phpgwapi_jquery::formvalidator_generate(array('location', 'date', 'security',
@@ -892,16 +914,23 @@
 
 			self::render_template_xsl('application_new', array('application' => $application,
 				'activities' => $activities, 'agegroups' => $agegroups, 'audience' => $audience,
-				'config' => $application_text));
+				'config' => CreateObject('phpgwapi.config', 'booking')->read()));
 		}
 
-
+	
 		function add_contact()
 		{
-			$config = CreateObject('phpgwapi.config', 'booking');
-			$config->read();
+			/**
+			 * check external login - and return here
+			 */
+			$bouser = CreateObject('bookingfrontend.bouser');
+
+			$external_login_info = $bouser->validate_ssn_login( array
+			(
+				'menuaction' => 'bookingfrontend.uiapplication.add_contact'
+			));
+
 			$orgnr = phpgwapi_cache::session_get($this->module, self::ORGNR_SESSION_KEY);
-			$application_text = $config->config_data;
 			$errors = array();
 
 			$partial2 = array();
@@ -991,7 +1020,7 @@
 			}
 
 			$this->install_customer_identifier_ui($partial2);
-			if ($orgnr)
+			if ($orgnr && $orgnr != '000000000')
 			{
 				$partial2['customer_identifier_type'] = 'organization_number';
 				$partial2['customer_organization_number'] = $orgnr;
@@ -1012,11 +1041,35 @@
 					$partial2['contact_phone'] = $organization['contacts'][1]['phone'];
 				}
 			}
+
+			if(!empty($external_login_info['ssn']))
+			{
+				$partial2['customer_ssn'] = $external_login_info['ssn'];
+			}
+			if(!empty($external_login_info['email']))
+			{
+				$partial2['contact_email'] = $external_login_info['email'];
+				$partial2['contact_email2'] = $external_login_info['email'];
+			}
+			if(!empty($external_login_info['phone']))
+			{
+				$partial2['contact_phone'] = $external_login_info['phone'];
+			}
+
 			$this->flash_form_errors($errors);
 			$partial2['cancel_link'] = self::link(array());
 			self::add_javascript('bookingfrontend', 'base', 'application.js');
 
-			self::render_template_xsl('application_contact', array('application' => $partial2, 'config' => $application_text));
+			/**
+			 * This one is for bookingfrontend
+			 */
+			self::add_javascript('bookingfrontend', 'base', 'application_contact.js', 'text/javascript', true);
+
+			self::render_template_xsl('application_contact', array(
+				'application' => $partial2,
+				'config' => CreateObject('phpgwapi.config', 'booking')->read()
+				)
+			);
 		}
 
 
@@ -1026,9 +1079,6 @@
 
 		public function edit()
 		{
-			$config = CreateObject('phpgwapi.config', 'booking');
-			$config->read();
-			$application_text = $config->config_data;
 			$id = phpgw::get_var('id', 'int');
 			$application = $this->bo->read_single($id);
 			$activity_path = $this->activity_bo->get_path($application['activity_id']);
@@ -1077,6 +1127,9 @@
 				}
 			}
 
+			$GLOBALS['phpgw']->jqcal2->add_listener('start_date', 'datetime', !empty($application['dates'][0]['from_']) ? strtotime($application['dates'][0]['from_']) : 0);
+			$GLOBALS['phpgw']->jqcal2->add_listener('end_date', 'datetime', !empty($application['dates'][0]['to_']) ? strtotime($application['dates'][0]['to_']) : 0);
+
 			foreach ($application['dates'] as &$date)
 			{
 				$date['from_'] = pretty_timestamp($date['from_']);
@@ -1103,9 +1156,21 @@
 			$application['audience_json'] = json_encode(array_map('intval', $application['audience']));
 			//test
 
-			$GLOBALS['phpgw']->jqcal2->add_listener('start_date', 'datetime');
-			$GLOBALS['phpgw']->jqcal2->add_listener('end_date', 'datetime');
 			//			self::render_template('application_edit', array('application' => $application, 'activities' => $activities, 'agegroups' => $agegroups, 'audience' => $audience));
+
+
+			if (phpgw::get_var('phpgw_return_as', 'string', 'GET') == 'json' )
+			{
+				echo json_encode(array(
+						'application' => $application,
+						'activities' => $activities,
+						'agegroups' => $agegroups,
+						'audience' => $audience
+					)
+				);
+
+				$GLOBALS['phpgw']->common->phpgw_exit();
+			}
 
 			if ($GLOBALS['phpgw_info']['flags']['currentapp'] != 'bookingfrontend')
 			{
@@ -1122,10 +1187,10 @@
 
 			phpgwapi_jquery::formvalidator_generate(array('location', 'date', 'security',
 				'file'), 'application_form');
-			//_debug_array($application_text);die();
+
 			self::render_template_xsl('application_edit', array('application' => $application,
 				'activities' => $activities, 'agegroups' => $agegroups, 'audience' => $audience,
-				'config' => $application_text));
+				'config' => CreateObject('phpgwapi.config', 'booking')->read()));
 		}
 
 		private function check_date_availability( &$allocation )
@@ -1194,9 +1259,6 @@
 
 		public function show()
 		{
-			$config = CreateObject('phpgwapi.config', 'booking');
-			$config->read();
-			$application_text = $config->config_data;
 			$id = phpgw::get_var('id', 'int');
 			$application = $this->bo->read_single($id);
 
@@ -1249,7 +1311,7 @@
 
 					if ($application['status'] == 'REJECTED')
 					{
-						$test = $this->assoc_bo->so->read(array('filters' => array('application_id' => $application['id'])));
+						$test = $this->assoc_bo->so->read(array('filters' => array('application_id' => $application['id']), 'results' =>'all'));
 						foreach ($test['results'] as $app)
 						{
 							$this->bo->so->set_inactive($app['id'], $app['type']);
@@ -1258,7 +1320,7 @@
 
 					if ($application['status'] == 'ACCEPTED')
 					{
-						$test = $this->assoc_bo->so->read(array('filters' => array('application_id' => $application['id'])));
+						$test = $this->assoc_bo->so->read(array('filters' => array('application_id' => $application['id']), 'results' =>'all'));
 						foreach ($test['results'] as $app)
 						{
 							$this->bo->so->set_active($app['id'], $app['type']);
@@ -1273,7 +1335,7 @@
 					/** Start attachment * */
 					$document_application = createObject('booking.uidocument_application');
 
-					$oldfiles = $document_application->bo->so->read(array('filters' => array('owner_id' => $application['id'])));
+					$oldfiles = $document_application->bo->so->read(array('filters' => array('owner_id' => $application['id']), 'results' =>'all'));
 					$files = $this->get_files();
 					$file_exist = false;
 
@@ -1370,7 +1432,8 @@
 			$audience = $audience['results'];
 			// Check if any bookings, allocations or events are associated with this application
 			$associations = $this->assoc_bo->so->read(array('filters' => array('application_id' => $application['id']),
-				'sort' => 'from_', 'dir' => 'asc'));
+				'sort' => 'from_', 'dir' => 'asc', 'results' =>'all'));
+
 			$from = array();
 			foreach ($associations['results'] as $assoc)
 			{
@@ -1415,7 +1478,7 @@
 			self::render_template_xsl('application', array('application' => $application,
 				'audience' => $audience, 'agegroups' => $agegroups,
 				'num_associations' => $num_associations, 'assoc' => $from, 'collision' => $collision_dates,
-				'comments' => $comments, 'config' => $application_text));
+				'comments' => $comments, 'config' => CreateObject('phpgwapi.config', 'booking')->read()));
 		}
 
 		function get_activity_data()
@@ -1448,7 +1511,8 @@
 					$item['dates']         = $partial['dates'];
 					$resources = $this->resource_bo->so->read(array(
 							'sort'    => 'sort',
-							'filters' => array('id' => $partial['resources'])
+							'results' =>'all',
+							'filters' => array('id' => $partial['resources']), 'results' =>'all'
 						));
 					foreach ($resources['results'] as $resource)
 					{

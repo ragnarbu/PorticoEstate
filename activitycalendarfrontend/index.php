@@ -96,7 +96,7 @@ HTML;
 	  \************************************************************************ */
 	if (!isset($GLOBALS['phpgw_info']['flags']['disable_Template_class']) || !$GLOBALS['phpgw_info']['flags']['disable_Template_class'])
 	{
-		$GLOBALS['phpgw']->template = createObject('phpgwapi.Template', PHPGW_APP_TPL);
+		$GLOBALS['phpgw']->template = createObject('phpgwapi.template', PHPGW_APP_TPL);
 		$GLOBALS['phpgw']->xslttpl = createObject('phpgwapi.xslttemplates', PHPGW_APP_TPL);
 	}
 
@@ -163,6 +163,22 @@ HTML;
 		$class = 'uiactivity';
 		$method = 'add';
 	}
+
+	if($app != 'activitycalendarfrontend')
+	{
+			$GLOBALS['phpgw']->common->phpgw_header(true);
+			$GLOBALS['phpgw']->log->write(array('text' => 'W-Permissions, Attempted to access %1',
+				'p1' => $app));
+
+			$lang_denied = lang('Access not permitted');
+			echo <<<HTML
+					<div class="error">$lang_denied</div>
+
+HTML;
+			$GLOBALS['phpgw']->common->phpgw_exit(True);
+
+	}
+
 	$GLOBALS[$class] = CreateObject("{$app}.{$class}");
 
 	$invalid_data = false; //FIXME consider whether this should be computed as in the main index.php

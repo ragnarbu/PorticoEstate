@@ -319,17 +319,7 @@
 		*/
 		public function randomstring($size = 20)
 		{
-			$s = '';
-			$random_char = array('0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f',
-				'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
-				'w','x','y','z','A','B','C','D','E','F','G','H','I','J','K','L',
-				'M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z');
-
-			for ($i=0; $i<$size; ++$i)
-			{
-				$s .= $random_char[mt_rand(1,61)];
-			}
-			return $s;
+			return bin2hex(random_bytes($size/2));
 		}
 
 		/**
@@ -660,7 +650,7 @@ HTML;
 		* @param string $appname application name optional can be derived from $GLOBALS['phpgw_info']['flags']['currentapp'];
 		* @param string? $layout optional can force the template set to a specific layout
 		*/
-		public function get_tpl_dir($appname = '',$layout = '')
+		public static function get_tpl_dir($appname = '',$layout = '')
 		{
 			if (! $appname)
 			{
@@ -1050,7 +1040,10 @@ HTML;
 				$app_css .= $GLOBALS['phpgw_info']['flags']['css'] . "\n";
 			}
 
-			$all_css .= "\n<!-- NOTE: This will not be supported in the future -->\n\t\t<style type=\"text/css\">\n\t\t{$app_css}\n\t\t</style>\n";
+			if($app_css)
+			{
+				$all_css .= "\n<!-- NOTE: This will not be supported in the future -->\n\t\t<style>\n\t\t{$app_css}\n\t\t</style>\n";
+			}
 			return $all_css;
 		}
 
@@ -1085,7 +1078,7 @@ HTML;
 				if($cal_script = $GLOBALS['phpgw']->yuical->get_script())
 				{
 					$GLOBALS['phpgw_info']['flags']['java_script'] .= "\n"
-						. '<script type="text/javascript">' ."\n"
+						. '<script>' ."\n"
 						. '//<[CDATA[' ."\n"
 						. $cal_script ."\n"
 						. '//]]' ."\n"
@@ -1122,9 +1115,13 @@ HTML;
 		* @author Sigurd Nes
 		* @return string The JavaScript code to include
 		*/
-		public function get_javascript_end()
+		public function get_javascript_end($cache_refresh_token = '')
 		{
 			$js = '';
+			if( isset($GLOBALS['phpgw']->js) && is_object($GLOBALS['phpgw']->js))
+			{
+				$js .= $GLOBALS['phpgw']->js->get_script_links($cache_refresh_token, true);
+			}
 
 			if (isset($GLOBALS['phpgw_info']['flags']['java_script_end']))
 			{

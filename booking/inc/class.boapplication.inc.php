@@ -60,7 +60,7 @@
 				// Check if any bookings, allocations or events are associated with this application
 				$assoc_bo = new booking_boapplication_association();
 				$associations = $assoc_bo->so->read(array('filters' => array('application_id' => $application['id']),
-					'sort' => 'from_', 'dir' => 'asc'));
+					'sort' => 'from_', 'dir' => 'asc', 'results' =>'all'));
 				$_adates = array();
 
 				foreach ($associations['results'] as $assoc)
@@ -125,7 +125,7 @@
 						{
 							try
 							{
-								$send->msg('email', $bemail, $bsubject, $bbody, '', '', '', $from, '', 'html');
+								$send->msg('email', $bemail, $bsubject, $bbody, '', '', '', $from, 'AktivKommune', 'html');
 							}
 							catch (Exception $e)
 							{
@@ -155,7 +155,7 @@
 
 			try
 			{
-				$send->msg('email', $application['contact_email'], $subject, $body, '', '', '', $from, '', 'html');
+				$send->msg('email', $application['contact_email'], $subject, $body, '', '', '', $from, 'AktivKommune', 'html');
 			}
 			catch (Exception $e)
 			{
@@ -202,10 +202,12 @@
 				$orgid = $this->organization_bo->so->get_orgid($application['customer_organization_number']);
 				$organization = $this->organization_bo->read_single($orgid);
 				$body = '<b>Kommentar fra ' . $organization['name'] . '</b><br />' . $message . '<br /><br/>';
+				$plain_text = "Kommentar fra {$organization['name']} \n{$message}\n";
 			}
 			else
 			{
 				$body = '<b>Kommentar fra ' . $application['contact_name'] . '</b><br />' . $message . '<br /><br/>';
+				$plain_text = "Kommentar fra {$application['name']} \n{$message}\n";
 			}
 
 			$body .= '<b>Bygg: </b>' . $application['building_name'] . '<br />';
@@ -215,15 +217,34 @@
 			$body .= '<b>Telefon:</b> ' . $application['contact_phone'] . '<br /><br />';
 			$body .= '<a href="' . $link . '">Lenke til søknad</a><br /><br />';
 
+			$plain_text .= "Bygg: {$application['building_name']}\n";
+			$plain_text .= "Aktivitet: {$activity['name']}\n";
+			$plain_text .= "Kontaktperson:{$application['contact_name']}\n";
+			$plain_text .= "Epost: {$application['contact_email']}\n";
+			$plain_text .= "Telefon: {$application['contact_phone']}\n";
+			$plain_text .= "Lenke til søknad: {$link}\n";
+
+			$html = <<<HTML
+<!DOCTYPE html>
+<html lang="no">
+	<head>
+		<meta charset="utf-8">
+		<title>$subject</title>
+	</head>
+	<body>{$body}</body>
+</html>
+HTML;
+
 			foreach ($mailadresses as $adr)
 			{
 				try
 				{
-					$send->msg('email', $adr, $subject, $body, '', '', '', $from, '', 'html');
+					$send->msg('email', $adr, $subject, $plain_text, '', '', '', $from, 'AktivKommune', 'text');
+					phpgwapi_cache::message_set("Epost er sendt til {$adr}");
 				}
 				catch (Exception $e)
 				{
-					// TODO: Inform user if something goes wrong
+					phpgwapi_cache::message_set("Epost feilet til {$adr}", 'error');
 					$GLOBALS['phpgw']->log->error(array(
 						'text'	=> 'booking_boapplication::send_admin_notification() : error when trying to send email. Error: %1',
 						'p1'	=> $e->getMessage(),
@@ -321,7 +342,7 @@
 			if (!empty($session_id))
 			{
 				$filters = array('status' => 'NEWPARTIAL1', 'session_id' => $session_id);
-				$params = array('filters' => $filters);
+				$params = array('filters' => $filters, 'results' =>'all');
 				$applications = $this->so->read($params);
 				$list = $applications;
 			}

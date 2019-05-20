@@ -16,6 +16,7 @@
 				'id' => array('type' => 'int', 'precision' => '2', 'nullable' => False),
 				'descr' => array('type' => 'varchar', 'precision' => '50', 'nullable' => True),
 				'delivery_address' => array('type' => 'text', 'nullable' => True),
+				'external_id' => array('type' => 'int', 'precision' => 4, 'nullable' => True),
 			),
 			'pk' => array('id'),
 			'fk' => array(),
@@ -28,6 +29,7 @@
 				'name' => array('type' => 'varchar', 'precision' => '150', 'nullable' => false),
 				'district_id' => array('type' => 'int', 'precision' => '2', 'nullable' => false),
 				'delivery_address' => array('type' => 'text', 'nullable' => True),
+				'external_id' => array('type' => 'int', 'precision' => 4, 'nullable' => True),
 			),
 			'pk' => array('id'),
 			'fk' => array('fm_district' => array('district_id' => 'id')),
@@ -204,7 +206,8 @@
 					'nullable' => True, 'default' => '0.00'),
 				'delivery_address' => array('type' => 'text', 'nullable' => True),
 				'modified_by' => array('type' => 'int', 'precision' => 4, 'nullable' => true),
-				'modified_on' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp')
+				'modified_on' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp'),
+				'external_id' => array('type' => 'int', 'precision' => 4, 'nullable' => True),
 			),
 			'pk' => array('loc1'),
 			'fk' => array('fm_location1_category' => array('category' => 'id')),
@@ -238,7 +241,8 @@
 				'delivery_address' => array('type' => 'text', 'nullable' => True),
 				'exp_date' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp'),
 				'modified_by' => array('type' => 'int', 'precision' => 4, 'nullable' => true),
-				'modified_on' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp')
+				'modified_on' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp'),
+				'external_id' => array('type' => 'int', 'precision' => 4, 'nullable' => True),
 			),
 			'pk' => array(),
 			'fk' => array(),
@@ -280,7 +284,8 @@
 				'area_usable' => array('type' => 'decimal', 'precision' => '20', 'scale' => '2',
 					'nullable' => True, 'default' => '0.00'),
 				'modified_by' => array('type' => 'int', 'precision' => 4, 'nullable' => true),
-				'modified_on' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp')
+				'modified_on' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp'),
+				'external_id' => array('type' => 'int', 'precision' => 4, 'nullable' => True),
 			),
 			'pk' => array('loc1', 'loc2'),
 			'fk' => array(
@@ -316,7 +321,8 @@
 					'nullable' => True, 'default' => '0.00'),
 				'exp_date' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp'),
 				'modified_by' => array('type' => 'int', 'precision' => 4, 'nullable' => true),
-				'modified_on' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp')
+				'modified_on' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp'),
+				'external_id' => array('type' => 'int', 'precision' => 4, 'nullable' => True),
 			),
 			'pk' => array(),
 			'fk' => array(),
@@ -356,7 +362,8 @@
 				'area_usable' => array('type' => 'decimal', 'precision' => '20', 'scale' => '2',
 					'nullable' => True, 'default' => '0.00'),
 				'modified_by' => array('type' => 'int', 'precision' => 4, 'nullable' => true),
-				'modified_on' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp')
+				'modified_on' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp'),
+				'external_id' => array('type' => 'int', 'precision' => 4, 'nullable' => True),
 			),
 			'pk' => array('loc1', 'loc2', 'loc3'),
 			'fk' => array(
@@ -390,7 +397,8 @@
 					'nullable' => True, 'default' => '0.00'),
 				'exp_date' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp'),
 				'modified_by' => array('type' => 'int', 'precision' => 4, 'nullable' => true),
-				'modified_on' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp')
+				'modified_on' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp'),
+				'external_id' => array('type' => 'int', 'precision' => 4, 'nullable' => True),
 			),
 			'pk' => array(),
 			'fk' => array(),
@@ -432,7 +440,8 @@
 				'area_usable' => array('type' => 'decimal', 'precision' => '20', 'scale' => '2',
 					'nullable' => True, 'default' => '0.00'),
 				'modified_by' => array('type' => 'int', 'precision' => 4, 'nullable' => true),
-				'modified_on' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp')
+				'modified_on' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp'),
+				'external_id' => array('type' => 'int', 'precision' => 4, 'nullable' => True),
 			),
 			'pk' => array('loc1', 'loc2', 'loc3', 'loc4'),
 			'fk' => array(
@@ -468,7 +477,8 @@
 					'nullable' => True, 'default' => '0.00'),
 				'exp_date' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp'),
 				'modified_by' => array('type' => 'int', 'precision' => 4, 'nullable' => true),
-				'modified_on' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp')
+				'modified_on' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp'),
+				'external_id' => array('type' => 'int', 'precision' => 4, 'nullable' => True),
 			),
 			'pk' => array(),
 			'fk' => array(),
@@ -517,6 +527,7 @@
 				'id' => array('type' => 'varchar', 'precision' => '20', 'nullable' => False),
 				'category' => array('type' => 'int', 'precision' => '4', 'nullable' => False),
 				'descr' => array('type' => 'varchar', 'precision' => '100', 'nullable' => False),
+				'ecodimb' => array('type' => 'int', 'precision' => '4', 'nullable' => true),
 				'mva' => array('type' => 'int', 'precision' => '4', 'nullable' => True),
 				'responsible' => array('type' => 'int', 'precision' => '4', 'nullable' => True),
 				'active' => array('type' => 'int', 'precision' => '2', 'nullable' => True, 'default' => '0'),
@@ -1316,10 +1327,12 @@
 				'parent_id' => array('type' => 'int', 'precision' => '4', 'nullable' => true),
 				'name' => array('type' => 'varchar', 'precision' => '200', 'nullable' => False),
 				'active' => array('type' => 'int', 'precision' => '2', 'nullable' => True, 'default' => 1),
+				'persistent' => array('type' => 'int', 'precision' => '2', 'nullable' => True),
 				'created_on' => array('type' => 'int', 'precision' => 4, 'nullable' => False),
 				'created_by' => array('type' => 'int', 'precision' => 4, 'nullable' => False),
 				'modified_by' => array('type' => 'int', 'precision' => 4, 'nullable' => true),
-				'modified_on' => array('type' => 'int', 'precision' => 4, 'nullable' => true)
+				'modified_on' => array('type' => 'int', 'precision' => 4, 'nullable' => true),
+				'external_id' => array('type' => 'int', 'precision' => 4, 'nullable' => True),
 			),
 			'pk' => array('id'),
 			'ix' => array(),
@@ -3031,6 +3044,37 @@
 			'pk' => array('id'),
 			'fk' => array('fm_location_exception_severity' => array('severity_id' => 'id'),
 				'fm_location_exception_category' => array('category_id' => 'id')),
+			'ix' => array(),
+			'uc' => array()
+		),
+		'fm_handyman_documents' => array(
+			'fd' => array(
+				'id' => array('type' => 'auto', 'precision' => 4, 'nullable' => False),
+				'hs_document_id' => array('type' => 'varchar', 'precision' => 20, 'nullable' => False),
+				'name' => array('type' => 'varchar', 'precision' => 20, 'nullable' => False),
+				'file_path' => array('type' => 'varchar', 'precision' => 20, 'nullable' => False),
+				'file_extension' => array('type' => 'varchar', 'precision' => 20, 'nullable' => False),
+				'hm_installation_id' => array('type' => 'varchar', 'precision' => 20, 'nullable' => False),
+				'created_date' => array('type' => 'timestamp', 'nullable' => True, 'default' => 'current_timestamp'),
+				'retrieved_from_handyman' => array('type' => 'int', 'precision' => 2, 'default' => '0'),
+				'retrieved_date' => array('type' => 'timestamp', 'nullable' => True),
+				'message_id' => array('type' => 'int', 'precision' => 4, 'default' => 0),
+				'hs_order_number' => array('type' => 'int', 'precision' => 4, 'nullable' => True),
+				'hs_checklist_id' => array('type' => 'int', 'precision' => 4, 'nullable' => True)
+			),
+			'pk' => array('id'),
+			'ix' => array(),
+			'uc' => array()
+		),
+		'fm_handyman_log' => array(
+			'fd' => array(
+				'id' => array('type' => 'auto', 'precision' => 4, 'nullable' => False),
+				'comment' => array('type' => 'text'),
+				'log_date' => array('type' => 'timestamp', 'default' => 'current_timestamp'),
+				'success' => array('type' => 'bool', 'nullable' => false, 'default' => 'false'),
+				'num_of_messages' => array('type' => 'int', 'precision' => 4)
+			),
+			'pk' => array('id'),
 			'ix' => array(),
 			'uc' => array()
 		)

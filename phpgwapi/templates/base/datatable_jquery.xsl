@@ -101,41 +101,26 @@
 			<xsl:value-of select="php:function('lang', 'filter')"/>
 		</label>
 		<div id="toolbar" class='dtable_custom_controls'>
-			<!--table id="toolbar_table" class="pure-table pure-table-horizontal"-->
 			<form class="pure-form pure-form-stacked">
 				 <fieldset>
-
-				<!--thead>
-					<tr>
-						<th>
-							<xsl:value-of select="php:function('lang', 'name')"/>
-						</th>
-						<th>
-							<xsl:value-of select="php:function('lang', 'item')"/>
-						</th>
-					</tr>
-				</thead-->
-				<!--tbody>
-					<tr>
-						<td-->
-						<div class="pure-g">
+				<div class="pure-g">
 					<xsl:for-each select="item">
 						<script type="text/javascript">
 							number_of_toolbar_items += 1;
 						</script>
-						 <div class="pure-u-1-2 pure-u-md-1-6">
+						 <div class="pure-u-1 pure-u-md-1-3">
 
 							<xsl:variable name="filter_key" select="concat('filter_', name)"/>
 							<xsl:variable name="filter_key_name" select="concat(concat('filter_', name), '_name')"/>
 							<xsl:variable name="filter_key_id" select="concat(concat('filter_', name), '_id')"/>
-								<xsl:if test="name">
-									<label>
-										<xsl:attribute name="for">
-											<xsl:value-of select="phpgw:conditional(not(name), '', name)"/>
-										</xsl:attribute>
-										<xsl:value-of select="phpgw:conditional(not(text), '', text)"/>
-									</label>
-								</xsl:if>
+							<xsl:if test="name">
+								<label>
+									<xsl:attribute name="for">
+										<xsl:value-of select="phpgw:conditional(not(name), '', name)"/>
+									</xsl:attribute>
+									<xsl:value-of select="phpgw:conditional(not(text), '', text)"/>
+								</label>
+							</xsl:if>
 							<xsl:choose>
 								<xsl:when test="type = 'date-picker'">
 									<input class="pure-u-24-24" id="filter_{name}" name="filter_{name}" value="{value}" type="text">
@@ -343,11 +328,7 @@
 							</xsl:choose>
 						 </div>
 					</xsl:for-each>
-						<!--/td>
-					</tr>
-				</tbody-->
-			<!--/table-->
-						</div>
+				</div>
 			 </fieldset>
 			</form>
 		</div>
@@ -642,6 +623,11 @@
 							<xsl:otherwise>
 							button_def.push({
 								text: "<xsl:value-of select="php:function('lang', 'new')"/>",
+								<xsl:choose>
+									<xsl:when test="bigmenubutton">
+										className: 'bigmenubutton',
+									</xsl:when>
+								</xsl:choose>
 								sUrl: '<xsl:value-of select="new_item"/>',
 
 								action: function (e, dt, node, config) {
@@ -835,7 +821,7 @@
 									var target = "<xsl:value-of select="target"/>";
 									if(!target)
 									{
-									target = '_self';
+										target = '_self';
 									}
 
 									if (numSelected &gt; 1){
@@ -854,39 +840,39 @@
 
 									<xsl:if test="parameters">
 										var parameters = <xsl:value-of select="parameters"/>;
-										//						console.log(parameters.parameter);
+				//						console.log(parameters.parameter);
 										var i = 0;
 										len = parameters.parameter.length;
 										for (; i &lt; len; ) {
-										action += '&amp;' + parameters.parameter[i]['name'] + '=' + aData[parameters.parameter[i]['source']];
-										i++;
+											action += '&amp;' + parameters.parameter[i]['name'] + '=' + aData[parameters.parameter[i]['source']];
+											i++;
 										}
 									</xsl:if>
 
-									// look for the word "DELETE" in URL and my_name
-									if(substr_count(action,'delete')>0 || substr_count(my_name,'delete')>0)
-									{
-									action += "&amp;confirm=yes&amp;phpgw_return_as=json";
-									execute_ajax(action, function(result){
-									document.getElementById("message").innerHTML += '<br/>' + result;
-									oTable.fnDraw();
-									});
-									}
-									else if (target == 'ajax')
-									{
-									action += "&amp;phpgw_return_as=json";
-									execute_ajax(action, function(result){
-									document.getElementById("message").innerHTML += '<br/>' + result;
-									oTable.fnDraw();
-									});
-									}
-									else
-									{
-									window.open(action,target);
-									}
-									n++;
-									}
-									}
+												// look for the word "DELETE" in URL and my_name
+												if(substr_count(action,'delete')>0 || substr_count(my_name,'delete')>0)
+												{
+													action += "&amp;confirm=yes&amp;phpgw_return_as=json";
+													execute_ajax(action, function(result){
+														document.getElementById("message").innerHTML += '<br/>' + result;
+														oTable.fnDraw();
+													});
+												}
+												else if (target == 'ajax')
+												{
+													action += "&amp;phpgw_return_as=json";
+													execute_ajax(action, function(result){
+														document.getElementById("message").innerHTML += '<br/>' + result;
+														oTable.fnDraw();
+													});
+												}
+												else
+												{
+													window.open(action,target);
+												}
+												n++;
+											}
+										}
 									});
 								</xsl:otherwise>
 							</xsl:choose>
@@ -1131,22 +1117,36 @@
 									{
 										if(value.constructor == Array)
 										{
+											$(oControl).find("option").removeAttr('selected');
+
 											$.each(value, function(i,e){
 												 oControl.find("option[value="+e+"]").prop("selected", "selected");
 											});
 
 											try
 											{
-												oControl.material_select();
+												oControl.formSelect();
+											}
+											catch(err)
+											{
+											}
+										}
+										else
+										{
+											oControl.val( value );
+											try
+											{
+												$(oControl).removeAttr('selected').find("option[value='"+value+"']").attr('selected', 'selected');
+
+												if($(oControl).find("option").length > 0)
+												{
+													$(oControl).formSelect();
+												}
 											}
 											catch(err)
 											{
 											}
 
-										}
-										else
-										{
-											oControl.val( value );
 										}
 									}
 								}

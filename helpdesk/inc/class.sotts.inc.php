@@ -38,6 +38,7 @@
 	{
 		var $uicols_related = array();
 		var $acl_location = '.ticket';
+		protected $account;
 
 		public $soap_functions = array
 			(
@@ -109,7 +110,8 @@
 			$start			= isset($data['start']) && $data['start'] ? $data['start']:0;
 			$status_id		= isset($data['status_id']) && $data['status_id'] ? $data['status_id']:'O'; //O='Open'
 			$user_id		= isset($data['user_id']) && $data['user_id'] ? $data['user_id']: 0;
-			$reported_by	= isset($data['reported_by']) && $data['reported_by'] ? (int)$data['reported_by'] : 0;
+			$group_id		= !empty($data['group_id']) ? (int)$data['group_id'] : 0;
+			$reported_by	= isset($data['reported_by']) && $data['reported_by'] ? $data['reported_by'] : 0;
 			$owner_id		= isset($data['owner_id'])?$data['owner_id']:'';
 			$query			= isset($data['query'])?$data['query']:'';
 			$sort			= isset($data['sort']) && $data['sort'] ? $data['sort']:'DESC';
@@ -185,9 +187,9 @@
 				$where= 'AND';
 			}
 
-			$GLOBALS['phpgw']->config->read();
+			$config = CreateObject('phpgwapi.config', 'helpdesk')->read();
 
-			if(isset($GLOBALS['phpgw']->config->config_data['acl_at_tts_category']) && $GLOBALS['phpgw']->config->config_data['acl_at_tts_category'])
+			if(!empty($config['acl_at_tts_category']))
 			{
 				$filtermethod .= " {$where} phpgw_helpdesk_tickets.cat_id IN (" . implode(",", $grant_category) . ")";
 				$where= 'AND';
@@ -306,15 +308,30 @@
 				$filtermethod .= ')';
 			}
 
-			if ($cat_id > 0)
+			if ($cat_id)
 			{
-				$_cats	= CreateObject('phpgwapi.categories', -1, 'helpdesk', '.ticket')->return_sorted_array(0, false, '', '', '', false, $cat_id);
-				$_filter_cat = array($cat_id);
-				foreach ($_cats as $_cat)
+				if(!is_array($cat_id))
 				{
-					$_filter_cat[] = $_cat['id'];
-
+					$cat_ids = array($cat_id);
 				}
+				else
+				{
+					$cat_ids = $cat_id;
+				}
+
+				$_filter_cat = array();
+				foreach ($cat_ids as $_cat_id)
+				{
+					$_cats	= CreateObject('phpgwapi.categories', -1, 'helpdesk', '.ticket')->return_sorted_array(0, false, '', '', '', false, $_cat_id);
+					$_filter_cat[] = $_cat_id;
+					foreach ($_cats as $_cat)
+					{
+						$_filter_cat[] = $_cat['id'];
+
+					}
+				}
+
+				$_filter_cat = array_unique($_filter_cat);
 
 				$filtermethod .= " $where cat_id IN (" . implode(',', $_filter_cat) . ')';
 				$where= 'AND';
@@ -357,9 +374,23 @@
 
 			}
 
-			if ($reported_by > 0)
+			if($group_id)
 			{
-				$filtermethod .= " $where phpgw_helpdesk_tickets.user_id=" . (int)$reported_by;
+				$filtermethod .= " $where phpgw_helpdesk_tickets.group_id=" . (int)$group_id;
+				$where = 'AND';
+			}
+
+
+			if ($reported_by)
+			{
+				if(is_array($reported_by))
+				{
+					$filtermethod .= " $where phpgw_helpdesk_tickets.user_id IN(" . implode(',', $reported_by) . ')';
+				}
+				else
+				{
+					$filtermethod .= " $where phpgw_helpdesk_tickets.user_id=" . (int)$reported_by;
+				}
 				$where = 'AND';
 			}
 
@@ -371,6 +402,10 @@
 
 			if ($start_date)
 			{
+				if(!$end_date)
+				{
+					$end_date = time();
+				}
 				$end_date	= $end_date + 3600 * 16 + phpgwapi_datetime::user_timezone();
 				$start_date	= $start_date - 3600 * 8 + phpgwapi_datetime::user_timezone();
 				$filtermethod .= " $where phpgw_helpdesk_tickets.entry_date >= $start_date AND phpgw_helpdesk_tickets.entry_date <= $end_date ";
@@ -383,8 +418,8 @@
 			{
 				$query = $this->db->db_addslashes($query);
 				$querymethod = " $where ( phpgw_helpdesk_tickets.id = " . (int) $query;
-
-				$query = $this->db->db_addslashes($query);
+				$querymethod .= " OR external_origin_email $this->like '%$query%'";
+				$querymethod .= " OR details $this->like '%$query%'";
 				$querymethod .= " OR subject $this->like '%$query%')";
 			}
 
@@ -429,24 +464,27 @@
 				{
 					$tickets[]= array
 					(
-						'id'				=> (int) $this->db2->f('id'),
-						'subject'			=> $this->db2->f('subject',true),
-						'user_id'			=> $this->db2->f('user_id'),
-						'assignedto'		=> $this->db2->f('assignedto'),
-						'status'			=> $this->db2->f('status'),
-						'priority'			=> $this->db2->f('priority'),
-						'cat_id'			=> $this->db2->f('cat_id'),
-						'group_id'			=> $this->db2->f('group_id'),
-						'entry_date'		=> $this->db2->f('entry_date'),
-						'modified_date'		=> $this->db2->f('modified_date'),
-						'finnish_date'		=> $this->db2->f('finnish_date'),
-						'finnish_date2'		=> $this->db2->f('finnish_date2'),
-						'order_id'			=> $this->db2->f('order_id'),
-						'vendor_id'			=> $this->db2->f('vendor_id'),
-						'actual_cost'		=> $this->db2->f('actual_cost'),
-						'estimate'			=> $this->db2->f('budget'),
-						'new_ticket'		=> $this->db2->f('view') ? false : true,
-						'billable_hours'	=> $this->db2->f('billable_hours'),
+						'id'					=> (int) $this->db2->f('id'),
+						'subject'				=> $this->db2->f('subject',true),
+						'user_id'				=> $this->db2->f('user_id'),
+						'assignedto'			=> $this->db2->f('assignedto'),
+						'status'				=> $this->db2->f('status'),
+						'priority'				=> $this->db2->f('priority'),
+						'cat_id'				=> $this->db2->f('cat_id'),
+						'group_id'				=> $this->db2->f('group_id'),
+						'entry_date'			=> $this->db2->f('entry_date'),
+						'modified_date'			=> $this->db2->f('modified_date'),
+						'finnish_date'			=> $this->db2->f('finnish_date'),
+						'finnish_date2'			=> $this->db2->f('finnish_date2'),
+						'order_id'				=> $this->db2->f('order_id'),
+						'vendor_id'				=> $this->db2->f('vendor_id'),
+						'actual_cost'			=> $this->db2->f('actual_cost'),
+						'estimate'				=> $this->db2->f('budget'),
+						'new_ticket'			=> $this->db2->f('view') ? false : true,
+						'billable_hours'		=> $this->db2->f('billable_hours'),
+						'details'				=> $this->db2->f('details', true),
+						'external_origin_email'	=> $this->db2->f('external_origin_email', true),
+
 					);
 					foreach ($custom_cols as $custom_col)
 					{
@@ -499,12 +537,30 @@
 		{
 			$id = (int) $id;
 
+			$location_id = $GLOBALS['phpgw']->locations->get_id('helpdesk', '.ticket');
+
+			$notified = createObject('property.notify')->read(array('location_id' => $location_id, 'location_item_id' => $id));
+
+			$additional_users = array();
+			foreach ($notified as $entry)
+			{
+				if($entry['account_id'])
+				{
+					$additional_users[] = $entry['account_id'];
+				}
+			}
 
 			$GLOBALS['phpgw']->acl->set_account_id($this->account);
 			$this->grants	= $GLOBALS['phpgw']->acl->get_grants2('helpdesk','.ticket');
 
 			$acl_join = "{$this->join} phpgw_accounts ON phpgw_helpdesk_tickets.user_id=phpgw_accounts.account_id";
 			$acl_join .= " {$this->join} phpgw_group_map ON (phpgw_accounts.account_id = phpgw_group_map.account_id)";
+
+			if($additional_users)
+			{
+				$acl_join .= "{$this->left_join} phpgw_notification ON (phpgw_notification.location_item_id = phpgw_helpdesk_tickets.id AND phpgw_notification.location_id = {$location_id})";
+				$acl_join .= "{$this->left_join} phpgw_accounts AS additional_users ON (phpgw_notification.contact_id = additional_users.person_id)";
+			}
 
 			$categories = $GLOBALS['phpgw']->locations->get_subs('helpdesk', '.ticket.category');
 
@@ -517,18 +573,23 @@
 					$grant_category[] = $category[3];
 				}
 			}
-
 			$grant_category[] = -1;//If no one found - not breaking the query
 
+			$_additional_user_filter = array();
 
-			$GLOBALS['phpgw']->config->read();
-
-			$filtermethod = '';
-			if(isset($GLOBALS['phpgw']->config->config_data['acl_at_tts_category']) && $GLOBALS['phpgw']->config->config_data['acl_at_tts_category'])
+			if($additional_users)
 			{
-				$filtermethod = " AND phpgw_helpdesk_tickets.cat_id IN (" . implode(",", $grant_category) . ")";
+				$_additional_user_filter[] = 'additional_users.account_id = ' . (int) $this->account;
 			}
 
+			$config = CreateObject('phpgwapi.config', 'helpdesk')->read();
+
+			$filtermethod = 'AND (phpgw_helpdesk_tickets.user_id = ' . (int) $this->account;
+
+			if(!empty($config['acl_at_tts_category']))
+			{
+				$filtermethod .= " AND (phpgw_helpdesk_tickets.cat_id IN (" . implode(",", $grant_category) . ")";
+			}
 
 			if (is_array($this->grants))
 			{
@@ -541,7 +602,7 @@
 					}
 					unset($user);
 					reset($public_user_list);
-					$filtermethod .= " AND (phpgw_helpdesk_tickets.user_id IN(" . implode(',', $public_user_list) . ")";
+					$_additional_user_filter[] = "phpgw_helpdesk_tickets.user_id IN(" . implode(',', $public_user_list) . ")";
 				}
 
 				$public_group_list = array();
@@ -553,16 +614,24 @@
 					}
 					unset($user);
 					reset($public_group_list);
-					$where = $public_user_list ? 'OR' : 'AND';
-					$filtermethod .= " $where phpgw_group_map.group_id IN(" . implode(',', $public_group_list) . "))";
-				}
-				if($public_user_list && !$public_group_list)
-				{
-					$filtermethod .=')';
+					$_additional_user_filter[] = "phpgw_group_map.group_id IN(" . implode(',', $public_group_list) . ")";
 				}
 			}
 
-			$sql = "SELECT DISTINCT phpgw_helpdesk_tickets.* FROM phpgw_helpdesk_tickets {$acl_join} WHERE id = {$id} {$filtermethod}";
+			if($_additional_user_filter)
+			{
+				$filtermethod .= ' OR(' . implode(' OR ',  $_additional_user_filter) . ')';
+			}
+
+			$filtermethod .=')';
+
+
+			if(!empty($config['acl_at_tts_category']))
+			{
+				$filtermethod .=')';
+			}
+
+			$sql = "SELECT DISTINCT phpgw_helpdesk_tickets.* FROM phpgw_helpdesk_tickets {$acl_join} WHERE phpgw_helpdesk_tickets.id = {$id} {$filtermethod}";
 
 			$this->db->query($sql,__LINE__,__FILE__);
 
@@ -600,7 +669,9 @@
 				$ticket['order_dim1']		= $this->db->f('order_dim1');
 				$ticket['publish_note']		= $this->db->f('publish_note');
 				$ticket['billable_hours']	= $this->db->f('billable_hours');
-				$ticket['modified_date'] = $this->db->f('modified_date');
+				$ticket['modified_date']	= $this->db->f('modified_date');
+				$ticket['external_ticket_id'] = $this->db->f('external_ticket_id');
+				$ticket['external_origin_email'] =  $this->db->f('external_origin_email', true);
 
 				if($ticket['reverse_id'])
 				{
@@ -679,7 +750,8 @@
 			$value_set['finnish_date'] = $ticket['finnish_date'];
 			$value_set['contact_id'] = $ticket['contact_id'];
 			$value_set['publish_note'] = 1;
-
+			$value_set['external_ticket_id'] = !empty($ticket['external_ticket_id']) ? (int)$ticket['external_ticket_id'] : null;
+			$value_set['external_origin_email'] = $this->db->db_addslashes($ticket['external_origin_email']);
 
 			$cols = implode(',', array_keys($value_set));
 			$values = $this->db->validate_insert(array_values($value_set));
@@ -699,7 +771,7 @@
 				}
 			}
 
-			$receipt['message'][]=array('msg'=>lang('Ticket %1 has been saved',$id));
+			$receipt['message'][]=array('msg'=>lang('Ticket %1 has been sent',$id));
 			$receipt['id']	= $id;
 			return $receipt;
 		}
@@ -786,6 +858,47 @@
 				$this->db->query('UPDATE phpgw_helpdesk_tickets SET modified_date= ' . time() . " WHERE id={$id}", __LINE__, __FILE__);
 				$receipt['message'][]= array('msg' => lang('Ticket %1 has been updated',$id));
 			}
+
+			return $receipt;
+
+		}
+
+		function take_over( $id = 0 )
+		{
+			$id = (int)$id;
+			$receipt = array();
+			$this->fields_updated = false;
+
+			$this->db->query("SELECT status, assignedto FROM phpgw_helpdesk_tickets WHERE id={$id}", __LINE__, __FILE__);
+			$this->db->next_record();
+			$oldassigned = $this->db->f('assignedto');
+			$old_status = $this->db->f('status');
+
+			$this->db->transaction_begin();
+
+			if ($oldassigned != $this->account)
+			{
+				$this->fields_updated = true;
+				$this->db->query("UPDATE phpgw_helpdesk_tickets SET assignedto='" . $this->account
+					. "' WHERE id={$id}", __LINE__, __FILE__);
+				$this->historylog->add('A', $id, $this->account, $oldassigned);
+
+				$config = CreateObject('phpgwapi.config', 'helpdesk')->read();
+				$new_status = !empty($config['take_over_status']) ? $config['take_over_status'] : 'O';
+				if ($old_status != $new_status)
+				{
+					$this->historylog->add('C1', $id, $new_status, $old_status);
+					$this->db->query("UPDATE phpgw_helpdesk_tickets SET status='{$new_status}' WHERE id= {$id}", __LINE__, __FILE__);
+				}
+			}
+
+			if ($this->fields_updated)
+			{
+				$this->db->query('UPDATE phpgw_helpdesk_tickets SET modified_date= ' . time() . " WHERE id={$id}", __LINE__, __FILE__);
+				$receipt['message'][] = array('msg' => lang('Ticket %1 has been updated', $id));
+			}
+
+			$this->db->transaction_commit();
 
 			return $receipt;
 
@@ -981,7 +1094,10 @@
 				$this->fields_updated[] = 'note';
 				$this->historylog->add('C', $id, $ticket['note'], $old_note);
 				$_history_id = $this->db->get_last_insert_id('phpgw_history_log', 'history_id');
-				$this->db->query("UPDATE phpgw_history_log SET publish = 1 WHERE history_id = $_history_id", __LINE__, __FILE__);
+				if($simple || $ticket['publish_text'] == 1)
+				{
+					$this->db->query("UPDATE phpgw_history_log SET publish = 1 WHERE history_id = $_history_id", __LINE__, __FILE__);
+				}
 				unset($_history_id);
 
 				$check_old_custom = (int)trim($old_status, 'C');
@@ -991,7 +1107,7 @@
 				if ($old_status == 'X' || $old_closed)
 				{
 					$config = CreateObject('phpgwapi.config', 'helpdesk')->read();
-					$new_status = !empty($config['reopen_status']) ? $config['reopen_status'] : '0';
+					$new_status = !empty($config['reopen_status']) ? $config['reopen_status'] : 'O';
 					$this->fields_updated[] = 'status';
 					$this->historylog->add('R', $id, $new_status, $old_status);
 					$this->db->query("UPDATE phpgw_helpdesk_tickets SET status='{$new_status}' WHERE id= {$id}", __LINE__, __FILE__);
@@ -1256,7 +1372,7 @@
 				foreach ($_cats as $_cat)
 				{
 					$_filter_cat[] = $_cat['id'];
-			
+
 				}
 
 				$filtermethod = ' WHERE cat_id IN (' . implode(',', $_filter_cat) . ')';
@@ -1280,4 +1396,57 @@
 
 			return $values;
 		}
+
+		function reset_views($id)
+		{
+			$this->db->transaction_begin();
+
+			$this->db->query("SELECT status FROM phpgw_helpdesk_tickets WHERE id =" . (int)$id, __LINE__, __FILE__);
+			$this->db->next_record();
+			$status = $this->db->f('status');
+
+			$custom_status  = (int)trim($status,'C');
+			$this->db->query("SELECT * FROM phpgw_helpdesk_status WHERE id = {$custom_status}",__LINE__,__FILE__);
+			$this->db->next_record();
+			if($status == 'X' || $this->db->f('closed'))
+			{
+				$config = CreateObject('phpgwapi.config', 'helpdesk')->read();
+				$new_status = !empty($config['reopen_status']) ? $config['reopen_status'] : 'O';
+				$this->fields_updated[] = 'status';
+				$this->historylog->add('R', $id, $new_status, $old_status);
+				$this->db->query("UPDATE phpgw_helpdesk_tickets SET status='{$new_status}' WHERE id= {$id}", __LINE__, __FILE__);
+	//			$this->db->query("UPDATE phpgw_helpdesk_tickets SET priority = 1 WHERE id = {$id}", __LINE__, __FILE__);
+			}
+
+			$this->db->query("DELETE FROM phpgw_helpdesk_views WHERE id=" . (int)$id, __LINE__, __FILE__);
+
+			return $this->db->transaction_commit();
+		}
+
+		public function get_assigned_groups2( $selected = 0)
+		{
+
+			$values = array();
+			$sql = "SELECT DISTINCT group_id as id , account_lastname, account_firstname FROM phpgw_helpdesk_tickets"
+				. " $this->join phpgw_accounts ON phpgw_helpdesk_tickets.group_id = phpgw_accounts.account_id"
+				. " {$filtermethod}"
+				. " ORDER BY account_lastname ASC";
+
+			$this->db->query($sql, __LINE__, __FILE__);
+
+			while ($this->db->next_record())
+			{
+				$id = $this->db->f('id');
+				$values[] = array
+				(
+					'id' => $id,
+					'name' => $this->db->f('account_firstname', true),
+					'selected' => $id = $selected ? 1 : 0
+				);
+			}
+
+			return $values;
+
+		}
+
 	}

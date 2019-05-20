@@ -63,6 +63,11 @@
 		*/
 		protected $files = array();
 
+		/**
+		* @var array list of validated files to be included in the end of a page
+		*/
+		protected $end_files = array();
+
 
 		/**
 		 *
@@ -129,8 +134,18 @@
 		*
 		* @returns string the html needed for importing the js into a page
 		*/
-		public function get_script_links($cache_refresh_token = '')
+		public function get_script_links($cache_refresh_token = '', $end_files = false)
 		{
+			if($end_files)
+			{
+				$files = $this->end_files;
+			}
+			else
+			{
+				$files = $this->files;
+			}
+
+
 			$combine = true;
 			$combine = false; // Temporary
 			
@@ -150,9 +165,9 @@
 			}
 			$links = "<!--JS Imports from phpGW javascript class -->\n";
 			$jsfiles = array();
-			if (is_array($this->files) && count($this->files))
+			if (is_array($files) && count($files))
 			{
-				foreach ($this->files as $app => $packages)
+				foreach ($files as $app => $packages)
 				{
 					if (is_array($packages) && count($packages))
 					{
@@ -160,7 +175,7 @@
 						{
 							if (is_array($files) && count($files))
 							{
-								foreach ($files as $file => $ignored)
+								foreach ($files as $file => $type)
 								{
 									if($combine)
 									{
@@ -170,8 +185,12 @@
 									else
 									{
 										//echo "file: {$this->webserver_url}/{$app}/js/{$pkg}/{$file}.js <br>";
-										$links .= '<script type="text/javascript" '
-										. "src=\"{$this->webserver_url}/{$app}/js/{$pkg}/{$file}.js{$cache_refresh_token}\">"
+										$links .= "<script ";
+										if($type != 'text/javascript')
+										{
+											$links .= "type=\"{$type}\" ";
+										}
+										$links .=  "src=\"{$this->webserver_url}/{$app}/js/{$pkg}/{$file}.js{$cache_refresh_token}\">"
 									 	. "</script>\n";
 									}
 								}
@@ -193,7 +212,7 @@
 					else
 					{
 						$links .= <<<HTML
-						<script type="text/javascript" src="{$this->webserver_url}/{$file}{$cache_refresh_token}" >
+						<script src="{$this->webserver_url}/{$file}{$cache_refresh_token}" >
 						</script>
 HTML;
 					}
@@ -204,7 +223,7 @@ HTML;
 			{
 				$cachedir = urlencode($GLOBALS['phpgw_info']['server']['temp_dir']);
 				$jsfiles = implode(',', $jsfiles);
-				$links .= '<script type="text/javascript" '
+				$links .= '<script '
 					. "src=\"{$this->webserver_url}/phpgwapi/inc/combine.php?cachedir={$cachedir}&type=javascript&files={$jsfiles}\">"
 					. "</script>\n";
 				unset($jsfiles);
@@ -289,25 +308,46 @@ HTML;
 		* @param string $app application directory to search - default = phpgwapi
 		* @returns bool was the file found?
 		*/
-		public function validate_file($package, $file, $app='phpgwapi')
+		public function validate_file($package, $file, $app='phpgwapi', $type ='text/javascript', $end_of_page = false)
 		{
 			$template_set = $GLOBALS['phpgw_info']['server']['template_set'];
 
 			if(is_readable(PHPGW_INCLUDE_ROOT . "/$app/js/$template_set/$file.js"))
 			{
-				$this->files[$app][$template_set][$file] = True;
+				if($end_of_page)
+				{
+					$this->end_files[$app][$template_set][$file] = $type;
+				}
+				else
+				{
+					$this->files[$app][$template_set][$file] = $type;
+				}
 				return True;
 			}
 			else if(is_readable(PHPGW_INCLUDE_ROOT . "/$app/js/$package/$file.js"))
 			{
-				$this->files[$app][$package][$file] = True;
+				if($end_of_page)
+				{
+					$this->end_files[$app][$package][$file] = $type;
+				}
+				else
+				{
+					$this->files[$app][$package][$file] = $type;
+				}
 				return True;
 			}
 			elseif($app != 'phpgwapi')
 			{
 				if(is_readable(PHPGW_INCLUDE_ROOT . "/phpgwapi/js/$package/$file.js"))
 				{
-					$this->files['phpgwapi'][$package][$file] = True;
+					if($end_of_page)
+					{
+						$this->end_files['phpgwapi'][$package][$file] = $type;
+					}
+					else
+					{
+						$this->files['phpgwapi'][$package][$file] = $type;
+					}
 					return True;
 				}
 				return False;
@@ -318,7 +358,7 @@ HTML;
 		{
 			$key = $end_of_page ? 'java_script_end' : 'java_script';
 			$GLOBALS['phpgw_info']['flags'][$key] .= "\n"
-				. '<script type="text/javascript">' ."\n"
+				. '<script>' ."\n"
 				. '//<[CDATA[' ."\n"
 				. $code ."\n"
 				. '//]]' ."\n"

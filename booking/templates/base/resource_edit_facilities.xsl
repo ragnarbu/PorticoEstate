@@ -50,7 +50,9 @@
 		initialSelection = <xsl:value-of select="resource/facilities_json"/>;
 		var lang = <xsl:value-of select="php:function('js_lang', 'Name')"/>;
 	    <![CDATA[
-            var facilitiesURL = 'index.php?menuaction=booking.uifacility.index&phpgw_return_as=json';
+//            var facilitiesURL = 'index.php?menuaction=booking.uifacility.index&phpgw_return_as=json';
+			var facilitiesURL = phpGWLink('index.php', {menuaction:'booking.uifacility.index', length:-1}, true);
+
 	        ]]>
 		var colDefsRespurces = [
 			{label: '', object: [
@@ -61,6 +63,6 @@
 				value: 'id', checked: initialSelection},
 			{key: 'name', label: lang['Name']},
 		];
-		createTable('facilities_container', facilitiesURL, colDefsRespurces);
+		createTable('facilities_container', facilitiesURL, colDefsRespurces, '', 'pure-table pure-table-bordered');
 	</script>
 </xsl:template>

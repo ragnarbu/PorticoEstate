@@ -159,7 +159,7 @@
 			{
 				try
 				{
-					$send->msg('email', $adr, $subject, $body, '', '', '', $from, '', 'html');
+					$send->msg('email', $adr, $subject, $body, '', '', '', $from, 'AktivKommune', 'html');
 				}
 				catch (Exception $e)
 				{
@@ -288,7 +288,7 @@
 			{
 				try
 				{
-					$send->msg('email', $adr, $subject, $body, '', '', '', $from, '', 'html');
+					$send->msg('email', $adr, $subject, $body, '', '', '', $from, 'AktivKommune', 'html');
 				}
 				catch (Exception $e)
 				{
@@ -458,41 +458,89 @@
 			$to = clone $from;
 			$to->modify('+7 days');
 			$allocation_ids = $this->so->allocation_ids_for_building($building_id, $from, $to);
-			$allocations = $this->allocation_so->read(array('filters' => array('id' => $allocation_ids)));
+			$allocations = $this->allocation_so->read(array('filters' => array('id' => $allocation_ids), 'results' => -1));
 			$allocations = $allocations['results'];
 			foreach ($allocations as &$allocation)
 			{
 				$allocation['name'] = $allocation['organization_name'];
 				$allocation['shortname'] = $allocation['organization_shortname'];
 				$allocation['type'] = 'allocation';
+				unset($allocation['costs']);
+				unset($allocation['comments']);
+				unset($allocation['secret']);
+				unset($allocation['customer_ssn']);
+				unset($allocation['organizer']);
+				unset($allocation['contact_name']);
+				unset($allocation['contact_email']);
+				unset($allocation['contact_phone']);
+				unset($allocation['cost']);
+				unset($allocation['sms_total']);
+				unset($allocation['customer_organization_name']);
+				unset($allocation['customer_organization_id']);
+				unset($allocation['customer_identifier_type']);
+				unset($allocation['customer_organization_number']);
+				unset($allocation['customer_internal']);
+				unset($allocation['include_in_list']);
+				unset($allocation['agegroups']);
+				unset($allocation['audience']);
 			}
 
 			$booking_ids = $this->so->booking_ids_for_building($building_id, $from, $to);
-			$bookings = $this->so->read(array('filters' => array('id' => $booking_ids)));
+			$bookings = $this->so->read(array('filters' => array('id' => $booking_ids), 'results' => -1));
 			$bookings = $bookings['results'];
 			foreach ($bookings as &$booking)
 			{
 				$booking['name'] = $booking['group_name'];
 				$booking['shortname'] = $booking['group_shortname'];
 				$booking['type'] = 'booking';
-				unset($booking['audience']);
+				unset($booking['costs']);
+				unset($booking['comments']);
+				unset($booking['secret']);
+				unset($booking['customer_ssn']);
+				unset($booking['organizer']);
+				unset($booking['contact_name']);
+				unset($booking['contact_email']);
+				unset($booking['contact_phone']);
+				unset($booking['cost']);
+				unset($booking['sms_total']);
+				unset($booking['customer_organization_name']);
+				unset($booking['customer_organization_id']);
+				unset($booking['customer_identifier_type']);
+				unset($booking['customer_organization_number']);
+				unset($booking['customer_internal']);
+				unset($booking['include_in_list']);
 				unset($booking['agegroups']);
+				unset($booking['audience']);
 			}
 
 			$allocations = $this->split_allocations($allocations, $bookings);
 
 			$event_ids = $this->so->event_ids_for_building($building_id, $from, $to);
-			$events = $this->event_so->read(array('filters' => array('id' => $event_ids)));
+			$events = $this->event_so->read(array('filters' => array('id' => $event_ids), 'results' => -1));
 			$events = $events['results'];
 			foreach ($events as &$event)
 			{
 
 				$event['name'] = $event['description'];
 				$event['type'] = 'event';
+				unset($event['costs']);
 				unset($event['comments']);
-				unset($event['audience']);
+				unset($event['secret']);
+				unset($event['customer_ssn']);
+				unset($event['organizer']);
+				unset($event['contact_name']);
+				unset($event['contact_email']);
+				unset($event['contact_phone']);
+				unset($event['cost']);
+				unset($event['sms_total']);
+				unset($event['customer_organization_name']);
+				unset($event['customer_organization_id']);
+				unset($event['customer_identifier_type']);
+				unset($event['customer_organization_number']);
+				unset($event['customer_internal']);
+				unset($event['include_in_list']);
 				unset($event['agegroups']);
-				unset($event['dates']);
+				unset($event['audience']);
 			}
 
 			$bookings = array_merge($allocations, $bookings);
@@ -506,7 +554,7 @@
 			$resource_ids = array_merge($resource_ids, $this->so->resource_ids_for_allocations($allocation_ids));
 			$resource_ids = array_merge($resource_ids, $this->so->resource_ids_for_events($event_ids));
 			$resources = $this->resource_so->read(array('filters' => array('id' => $resource_ids,
-					'active' => 1)));
+					'active' => 1), 'results' => -1));
 			$resources = $resources['results'];
 
 			foreach ($resources as $key => $row)
@@ -712,8 +760,8 @@
 					$booking['weekday'] = date_format(date_create($booking['date']), 'D');
 					$booking['from_'] = $from->format('H:i');
 					$booking['to_'] = $to->format('H:i');
-					// We need to use 24:00 instead of 00:00 to sort correctly
-					$booking['to_'] = $booking['to_'] == '00:00' ? '24:00' : $booking['to_'];
+					// We need to use 23:59 instead of 00:00 to sort correctly
+					$booking['to_'] = $booking['to_'] == '00:00' ? '23:59' : $booking['to_'];
 					$new_bookings[] = $booking;
 				}
 				// Multi-day booking
@@ -737,8 +785,8 @@
 						{
 							$new_booking['to_'] = $to->format('H:i');
 						}
-						// We need to use 24:00 instead of 00:00 to sort correctly
-						$new_booking['to_'] = $new_booking['to_'] == '00:00' ? '24:00' : $new_booking['to_'];
+						// We need to use 23:59 instead of 00:00 to sort correctly
+						$new_booking['to_'] = $new_booking['to_'] == '00:00' ? '23:59' : $new_booking['to_'];
 						$new_bookings[] = $new_booking;
 
 						if ($date->format('Y-m-d') == $end->format('Y-m-d'))
@@ -779,41 +827,90 @@
 			$orgids = explode(",", $config->config_data['extra_schedule_ids']);
 
 			$allocations = $this->allocation_so->read(array('filters' => array('id' => $allocation_ids,
-					'organization_id' => $orgids), 'sort' => 'from_'));
+					'organization_id' => $orgids), 'sort' => 'from_', 'results' => -1));
 			$allocations = $allocations['results'];
 			foreach ($allocations as &$allocation)
 			{
 				$allocation['name'] = $allocation['organization_name'];
 				$allocation['shortname'] = $allocation['organization_shortname'];
 				$allocation['type'] = 'allocation';
+				unset($allocation['costs']);
+				unset($allocation['comments']);
+				unset($allocation['secret']);
+				unset($allocation['customer_ssn']);
+				unset($allocation['organizer']);
+				unset($allocation['contact_name']);
+				unset($allocation['contact_email']);
+				unset($allocation['contact_phone']);
+				unset($allocation['cost']);
+				unset($allocation['sms_total']);
+				unset($allocation['customer_organization_name']);
+				unset($allocation['customer_organization_id']);
+				unset($allocation['customer_identifier_type']);
+				unset($allocation['customer_organization_number']);
+				unset($allocation['customer_internal']);
+				unset($allocation['include_in_list']);
+				unset($allocation['agegroups']);
+				unset($allocation['audience']);
 			}
 
 			$booking_ids = $this->so->booking_ids_for_building($building_id, $from, $to);
-			$bookings = $this->so->read(array('filters' => array('id' => $booking_ids), 'sort' => 'from_'));
+			$bookings = $this->so->read(array('filters' => array('id' => $booking_ids), 'sort' => 'from_', 'results' => -1));
 			$bookings = $bookings['results'];
 			foreach ($bookings as &$booking)
 			{
 				$booking['name'] = $booking['group_name'];
 				$booking['shortname'] = $booking['group_shortname'];
 				$booking['type'] = 'booking';
-				unset($booking['audience']);
+				unset($booking['costs']);
+				unset($booking['comments']);
+				unset($booking['secret']);
+				unset($booking['customer_ssn']);
+				unset($booking['organizer']);
+				unset($booking['contact_name']);
+				unset($booking['contact_email']);
+				unset($booking['contact_phone']);
+				unset($booking['cost']);
+				unset($booking['sms_total']);
+				unset($booking['customer_organization_name']);
+				unset($booking['customer_organization_id']);
+				unset($booking['customer_identifier_type']);
+				unset($booking['customer_organization_number']);
+				unset($booking['customer_internal']);
+				unset($booking['include_in_list']);
 				unset($booking['agegroups']);
+				unset($booking['audience']);
 			}
 
 			$allocations = $this->split_allocations($allocations, $bookings);
 
 			$event_ids = $this->so->event_ids_for_building($building_id, $from, $to);
 			$events = $this->event_so->read(array('filters' => array('id' => $event_ids),
-				'sort' => 'from_'));
+				'sort' => 'from_', 'results' => -1));
 			$events = $events['results'];
 			foreach ($events as &$event)
 			{
 
 				$event['name'] = $event['description'];
 				$event['type'] = 'event';
+				unset($event['costs']);
 				unset($event['comments']);
-				unset($event['audience']);
+				unset($event['secret']);
+				unset($event['customer_ssn']);
+				unset($event['organizer']);
+				unset($event['contact_name']);
+				unset($event['contact_email']);
+				unset($event['contact_phone']);
+				unset($event['cost']);
+				unset($event['sms_total']);
+				unset($event['customer_organization_name']);
+				unset($event['customer_organization_id']);
+				unset($event['customer_identifier_type']);
+				unset($event['customer_organization_number']);
+				unset($event['customer_internal']);
+				unset($event['include_in_list']);
 				unset($event['agegroups']);
+				unset($event['audience']);
 			}
 
 			$bookings = array_merge($allocations, $bookings);
@@ -823,7 +920,7 @@
 			$resource_ids = array_merge($resource_ids, $this->so->resource_ids_for_allocations($allocation_ids));
 			$resource_ids = array_merge($resource_ids, $this->so->resource_ids_for_events($event_ids));
 			$resources = $this->resource_so->read(array('filters' => array('id' => $resource_ids,
-					'active' => 1)));
+					'active' => 1, 'results' => -1)));
 			$resources = $resources['results'];
 
 			foreach ($resources as $key => $row)
@@ -861,33 +958,87 @@
 			$to->modify('+7 days');
 			$resource = $this->resource_so->read_single($resource_id);
 			$allocation_ids = $this->so->allocation_ids_for_resource($resource_id, $from, $to);
-			$allocations = $this->allocation_so->read(array('filters' => array('id' => $allocation_ids)));
+			$allocations = $this->allocation_so->read(array('filters' => array('id' => $allocation_ids), 'results' => -1));
 			$allocations = $allocations['results'];
 			foreach ($allocations as &$allocation)
 			{
 				$allocation['name'] = $allocation['organization_name'];
 				$allocation['shortname'] = $allocation['organization_shortname'];
 				$allocation['type'] = 'allocation';
+				unset($allocation['costs']);
+				unset($allocation['comments']);
+				unset($allocation['secret']);
+				unset($allocation['customer_ssn']);
+				unset($allocation['organizer']);
+				unset($allocation['contact_name']);
+				unset($allocation['contact_email']);
+				unset($allocation['contact_phone']);
+				unset($allocation['cost']);
+				unset($allocation['sms_total']);
+				unset($allocation['customer_organization_name']);
+				unset($allocation['customer_organization_id']);
+				unset($allocation['customer_identifier_type']);
+				unset($allocation['customer_organization_number']);
+				unset($allocation['customer_internal']);
+				unset($allocation['include_in_list']);
+				unset($allocation['agegroups']);
+				unset($allocation['audience']);
 			}
 			$booking_ids = $this->so->booking_ids_for_resource($resource_id, $from, $to);
-			$bookings = $this->so->read(array('filters' => array('id' => $booking_ids)));
+			$bookings = $this->so->read(array('filters' => array('id' => $booking_ids), 'results' => -1));
 			$bookings = $bookings['results'];
 			foreach ($bookings as &$booking)
 			{
 				$booking['name'] = $booking['group_name'];
 				$booking['shortname'] = $booking['group_shortname'];
 				$booking['type'] = 'booking';
+				unset($booking['costs']);
+				unset($booking['comments']);
+				unset($booking['secret']);
+				unset($booking['customer_ssn']);
+				unset($booking['organizer']);
+				unset($booking['contact_name']);
+				unset($booking['contact_email']);
+				unset($booking['contact_phone']);
+				unset($booking['cost']);
+				unset($booking['sms_total']);
+				unset($booking['customer_organization_name']);
+				unset($booking['customer_organization_id']);
+				unset($booking['customer_identifier_type']);
+				unset($booking['customer_organization_number']);
+				unset($booking['customer_internal']);
+				unset($booking['include_in_list']);
+				unset($booking['agegroups']);
+				unset($booking['audience']);
 			}
 
 			$allocations = $this->split_allocations($allocations, $bookings);
 
 			$event_ids = $this->so->event_ids_for_resource($resource_id, $from, $to);
-			$events = $this->event_so->read(array('filters' => array('id' => $event_ids)));
+			$events = $this->event_so->read(array('filters' => array('id' => $event_ids), 'results' => -1));
 			$events = $events['results'];
 			foreach ($events as &$event)
 			{
 				$event['name'] = $event['description'];
 				$event['type'] = 'event';
+				unset($event['costs']);
+				unset($event['comments']);
+				unset($event['secret']);
+				unset($event['customer_ssn']);
+				unset($event['organizer']);
+				unset($event['contact_name']);
+				unset($event['contact_email']);
+				unset($event['contact_phone']);
+				unset($event['cost']);
+				unset($event['sms_total']);
+				unset($event['customer_organization_name']);
+				unset($event['customer_organization_id']);
+				unset($event['customer_identifier_type']);
+				unset($event['customer_organization_number']);
+				unset($event['customer_internal']);
+				unset($event['include_in_list']);
+				unset($event['agegroups']);
+				unset($event['audience']);
 			}
 			$bookings = array_merge($allocations, $bookings);
 			$bookings = $this->_remove_event_conflicts($bookings, $events);
@@ -990,8 +1141,8 @@
 					$booking['wday'] = date_format(date_create($booking['date']), 'D');
 					$booking['from_'] = $from->format('H:i');
 					$booking['to_'] = $to->format('H:i');
-					// We need to use 24:00 instead of 00:00 to sort correctly
-					$booking['to_'] = $booking['to_'] == '00:00' ? '24:00' : $booking['to_'];
+					// We need to use 23:59 instead of 00:00 to sort correctly
+					$booking['to_'] = $booking['to_'] == '00:00' ? '23:59' : $booking['to_'];
 					$new_bookings[] = $booking;
 				}
 				// Multi-day booking
@@ -1015,8 +1166,8 @@
 						{
 							$new_booking['to_'] = $to->format('H:i');
 						}
-						// We need to use 24:00 instead of 00:00 to sort correctly
-						$new_booking['to_'] = $new_booking['to_'] == '00:00' ? '24:00' : $new_booking['to_'];
+						// We need to use 23:59 instead of 00:00 to sort correctly
+						$new_booking['to_'] = $new_booking['to_'] == '00:00' ? '23:59' : $new_booking['to_'];
 						$new_bookings[] = $new_booking;
 
 						if ($date->format('Y-m-d') == $end->format('Y-m-d'))

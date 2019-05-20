@@ -28,6 +28,9 @@
 			$this->resource_bo = CreateObject('booking.boresource');
 			$this->system_message_bo = CreateObject('booking.bosystem_message');
 			self::set_active_menu('booking::dashboard');
+			$this->display_name = lang('dashboard');
+			$GLOBALS['phpgw_info']['flags']['app_header'] = lang('booking') . "::{$this->display_name}";
+
 		}
 
 		public function toggle_show_all_dashboard_applications()
@@ -81,7 +84,7 @@
 			phpgwapi_jquery::load_widget('autocomplete');
 
 			$data = array(
-				'datatable_name' => lang('dashboard'),
+				'datatable_name' => $this->display_name,
 				'form' => array(
 					'toolbar' => array(
 						'item' => array(
@@ -189,7 +192,7 @@
 				$application['created'] = pretty_timestamp($application['created']);
 				$application['modified'] = pretty_timestamp($application['modified']);
 				$application['frontend_modified'] = pretty_timestamp($application['frontend_modified']);
-				$application['resources'] = $this->resource_bo->so->read(array('filters' => array(
+				$application['resources'] = $this->resource_bo->so->read(array('results' => -1, 'filters' => array(
 						'id' => $application['resources'])));
 				$application['resources'] = $application['resources']['results'];
 				if ($application['resources'])

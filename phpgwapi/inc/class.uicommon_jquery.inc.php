@@ -78,6 +78,22 @@
 			self::add_javascript('phpgwapi', "jquery", 'common.js');
 
 			self::add_javascript('phpgwapi', 'DataTables', 'DataTables/js/jquery.dataTables.min.js');
+
+			$GLOBALS['phpgw']->css->add_external_file('phpgwapi/js/DataTables/DataTables/css/jquery.dataTables.min.css');
+
+			/**
+			 * If we want to use boostrap - styling
+			 */
+			if(false)
+			{
+				$GLOBALS['phpgw']->css->add_external_file('phpgwapi/js/DataTables/DataTables/css/dataTables.bootstrap4.min.css');
+				self::add_javascript('phpgwapi', 'DataTables', 'DataTables/js/dataTables.bootstrap4.min.js');
+			}
+			else
+			{
+				$GLOBALS['phpgw']->css->add_external_file('phpgwapi/js/DataTables/DataTables/css/dataTables.jqueryui.min.css');
+			}
+
 			self::add_javascript('phpgwapi', 'DataTables', 'Responsive/js/dataTables.responsive.js');
 			//Buttons
 			self::add_javascript('phpgwapi', 'DataTables', 'Buttons/js/dataTables.buttons.min.js');
@@ -91,9 +107,7 @@
 			self::add_javascript('phpgwapi', 'jquery', 'editable/jquery.jeditable.js');
 			self::add_javascript('phpgwapi', 'jquery', 'editable/jquery.dataTables.editable.js');
 
-
-			$GLOBALS['phpgw']->css->add_external_file('phpgwapi/js/DataTables/media/css/jquery.dataTables.css');
-			$GLOBALS['phpgw']->css->add_external_file('phpgwapi/js/DataTables/Responsive/css/dataTables.responsive.css');
+			$GLOBALS['phpgw']->css->add_external_file('phpgwapi/js/DataTables/Responsive/css/responsive.dataTables.min.css');
 			$GLOBALS['phpgw']->css->add_external_file('phpgwapi/js/DataTables/Buttons/css/buttons.dataTables.css');
 
 			//pop up script
@@ -166,9 +180,9 @@
 			return $this->session_get(get_class($this) . '_' . $key);
 		}
 
-		protected function generate_secret( $length = 10 )
+		protected function generate_secret( $length = 16 )
 		{
-			return substr(base64_encode(sprintf("%010d", mt_rand())), 0, $length);
+			return bin2hex(random_bytes($length));
 		}
 
 		public function add_js_event( $event, $js )
@@ -181,7 +195,7 @@
 			$this->add_js_event('load', $js);
 		}
 
-		function get_link_base()
+		static function get_link_base()
 		{
 			$base = '/index.php';
 
@@ -203,7 +217,7 @@
 			return $base;
 		}
 
-		public function link( $data )
+		public static function link( $data )
 		{
 			$base = self::get_link_base();
 			return $GLOBALS['phpgw']->link($base, $data);
@@ -261,9 +275,9 @@
 		 * @return type
 		 */
 
-		public function add_javascript( $app, $pkg, $name )
+		public function add_javascript( $app, $pkg, $name, $type = 'text/javascript', $end_of_page = false)
 		{
-			return $GLOBALS['phpgw']->js->validate_file($pkg, str_replace('.js', '', $name), $app);
+			return $GLOBALS['phpgw']->js->validate_file($pkg, str_replace('.js', '', $name), $app, $type, $end_of_page);
 		}
 
 		public function set_active_menu( $item )
@@ -293,9 +307,7 @@
 					return;
 				}
 			}
-			echo "Template $tmpl not found in search path: ";
-			print_r($this->tmpl_search_path);
-			die;
+			throw new Exception("Template $tmpl not found in search path:". print_r($this->tmpl_search_path, true));
 		}
 
 		public function render_template( $output )
@@ -434,7 +446,7 @@
 
 			if (phpgw::get_var('phpgw_return_as', 'string', 'GET') == 'json' )
 			{
-				echo json_encode($data);
+//				echo json_encode($data);
 				$GLOBALS['phpgw']->common->phpgw_exit();
 			}
 

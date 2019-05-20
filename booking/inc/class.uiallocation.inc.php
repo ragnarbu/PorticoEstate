@@ -36,6 +36,9 @@
 				'season_id', 'season_name',
 				'organization_id', 'organization_name',
 				'organization_shortname', 'from_', 'to_', 'active');
+
+			$this->display_name = lang('allocations');
+			$GLOBALS['phpgw_info']['flags']['app_header'] = lang('booking') . "::{$this->display_name}";
 		}
 
 		public function index()
@@ -50,6 +53,7 @@
 			phpgwapi_jquery::load_widget('autocomplete');
 			$build_id = phpgw::get_var('buildings', 'int', 'REQUEST', null);
 			$data = array(
+				'datatable_name' => $this->display_name,
 				'form' => array(
 					'toolbar' => array(
 						'item' => array(
@@ -134,7 +138,6 @@
 
 			$data['filters'] = $this->export_filters;
 			self::render_template_xsl('datatable_jquery', $data);
-//			self::render_template('datatable', $data);
 		}
 
 		public function query()
@@ -298,7 +301,7 @@
 						$application = createObject('booking.boapplication')->read_single($application_id);
 						if($organization_number = $application['customer_organization_number'])
 						{
-							$organizations = createObject('booking.soorganization')->read(array('filters' => array('organization_number' => $organization_number,
+							$organizations = createObject('booking.soorganization')->read(array('results' => -1, 'filters' => array('organization_number' => $organization_number,
 								'active' => 1)));
 
 							$_POST['organization_id'] = $organizations['results'][0]['id'];
@@ -307,7 +310,6 @@
 					}
 
 				}
-
 
 				$allocation = extract_values($_POST, $this->fields);
 				if ($_POST['cost'])
@@ -556,7 +558,7 @@
 				{
 					try
 					{
-						$send->msg('email', $contact['email'], $subject, $body, '', '', '', $from, '', 'html');
+						$send->msg('email', $contact['email'], $subject, $body, '', '', '', $from, 'AktivKommune', 'html');
 					}
 					catch (Exception $e)
 					{
@@ -805,7 +807,7 @@
 		{
 			$allocation = $this->bo->read_single(phpgw::get_var('id', 'int'));
 			$resources = $this->resource_bo->so->read(array('filters' => array('id' => $allocation['resources']),
-				'sort' => 'name'));
+				'sort' => 'name','results' => -1));
 			$allocation['resources'] = $resources['results'];
 			$res_names = array();
 			foreach ($allocation['resources'] as $res)

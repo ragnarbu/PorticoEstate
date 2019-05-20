@@ -177,13 +177,15 @@
 			$this->_db			=& $GLOBALS['phpgw']->db;
 			$this->_use_cookies = false;
 			$GLOBALS['phpgw']->hooks->process('set_cookie_domain', array('eventplannerfrontend','mobilefrontend', 'bookingfrontend', 'activitycalendarfrontend'));
+
+			$this->_phpgw_set_cookie_params();
+
 			if ( isset($GLOBALS['phpgw_info']['server']['usecookies'])
 				&& $GLOBALS['phpgw_info']['server']['usecookies'] == 'True' )
 			{
 				$this->_use_cookies = true;
 				$this->_sessionid	= phpgw::get_var(session_name(), 'string', 'COOKIE');
 
-				$this->_phpgw_set_cookie_params();
 			}
 			else if (!empty($_GET[session_name()]))
 			{
@@ -518,11 +520,12 @@
 			{
 				$this->_history_id = md5($this->_login . time());
 				$history = $this->appsession('history', 'phpgwapi');
+				$history = (array)phpgwapi_cache::session_get('phpgwapi', 'history');
 
 				if(count($history) >= $GLOBALS['phpgw_info']['server']['max_history'])
 				{
 					array_shift($history);
-					$this->appsession('history', 'phpgwapi', $history);
+					$history = phpgwapi_cache::session_set('phpgwapi', 'history', $history);
 				}
 			}
 			return $this->_history_id;
@@ -642,9 +645,15 @@
 
 			if($external || $GLOBALS['phpgw_info']['server']['webserver_url'] == '/')
 			{
-				if(substr($url, 0, 4) != 'http')
+				$server_port = phpgw::get_var('SERVER_PORT', 'int','SERVER');
+
+				if($server_port == 443)
 				{
-					$server_port = phpgw::get_var('SERVER_PORT', 'int','SERVER');
+					$request_scheme = 'https';
+				}
+
+				if(substr($url, 0, 4) != 'http' && $request_scheme != 'https')
+				{
 					$url = "{$request_scheme}://{$GLOBALS['phpgw_info']['server']['hostname']}:{$server_port}{$url}";
 				}
 			}
@@ -739,9 +748,10 @@
 
 			if($external && empty($extravars['domain']))
 			{
-				if($this->_account_domain !='default')
+				//cron..
+				if($GLOBALS['phpgw_info']['user']['domain'] !='default')
 				{
-					$extravars['domain'] = $this->_account_domain;
+					$extravars['domain'] = $GLOBALS['phpgw_info']['user']['domain'];
 				}
 			}
 

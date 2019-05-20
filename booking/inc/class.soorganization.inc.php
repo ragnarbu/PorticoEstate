@@ -8,7 +8,9 @@
 
 		function __construct()
 		{
-			parent::__construct('bb_organization', array(
+			$currentapp = $GLOBALS['phpgw_info']['flags']['currentapp'];
+
+			$fields = array(
 				'id' => array('type' => 'int'),
 				'organization_number' => array('type' => 'string', 'query' => true, 'sf_validator' => createObject('booking.sfValidatorNorwegianOrganizationNumber', array(), array(
 						'invalid' => '%field% is invalid'))),
@@ -28,8 +30,6 @@
 				'activity_id' => array('type' => 'int', 'required' => true),
 				'customer_identifier_type' => array('type' => 'string', 'required' => False),
 				'customer_number' => array('type' => 'string', 'required' => False),
-				'customer_ssn' => array('type' => 'string', 'sf_validator' => createObject('booking.sfValidatorNorwegianSSN'),
-					'required' => false),
 				'customer_organization_number' => array('type' => 'string', 'sf_validator' => createObject('booking.sfValidatorNorwegianOrganizationNumber', array(), array(
 						'invalid' => '%field% is invalid'))),
 				'customer_internal' => array('type' => 'int', 'required' => true),
@@ -46,14 +46,25 @@
 						'table' => 'bb_organization_contact',
 						'key' => 'organization_id',
 						'column' => array('name',
-							'ssn' => array('sf_validator' => createObject('booking.sfValidatorNorwegianSSN')),
+//							'ssn' => array('sf_validator' => createObject('booking.sfValidatorNorwegianSSN')),
 							'email' => array('sf_validator' => createObject('booking.sfValidatorEmail', array(), array(
 									'invalid' => '%field% contains an invalid email'))),
 							'phone')
 					)
-				),
 				)
 			);
+
+			/**
+			 * Hide from bookingfrontend
+			 */
+			if($currentapp == 'booking')
+			{
+				$fields['customer_ssn'] = array('type' => 'string', 'sf_validator' => createObject('booking.sfValidatorNorwegianSSN'),	'required' => false);
+				$fields['contacts']['manytomany']['column']['ssn'] = array('sf_validator' => createObject('booking.sfValidatorNorwegianSSN'));
+			}
+			
+
+			parent::__construct('bb_organization', $fields);
 			$this->account = $GLOBALS['phpgw_info']['user']['account_id'];
 		}
 
@@ -88,7 +99,7 @@
 			{
 				$groups = new booking_sogroup();
 			}
-			$results = $groups->read(array("filters" => array("organization_id" => $organization_id)));
+			$results = $groups->read(array('results' => -1, "filters" => array("organization_id" => $organization_id)));
 			return $results;
 		}
 
@@ -178,6 +189,10 @@
 			{
 				$params['filters'] = array();
 			}
+			if (!isset($params['results']))
+			{
+				$params['results'] = -1;
+			}
 			if (!isset($params['filters']['where']))
 			{
 				$params['filters']['where'] = array();
@@ -210,4 +225,17 @@
 			}
 			return $this->read($params);
 		}
+
+		protected function preValidate( &$entity )
+		{
+			if (!empty($entity['customer_organization_number']))
+			{
+				$entity['customer_organization_number'] = str_replace(" ", "", $entity['customer_organization_number']);
+			}
+			if (!empty($entity['customer_organization_number']))
+			{
+				$entity['organization_number'] = str_replace(" ", "", $entity['organization_number']);
+			}
+		}
+
 	}

@@ -61,6 +61,7 @@
 		private $add;
 		private $edit;
 		private $delete;
+		private $vfs;
 		var $public_functions = array
 			(
 			'add_case' => true,
@@ -75,7 +76,13 @@
 			'open_case' => true,
 			'view_open_cases' => true,
 			'view_closed_cases' => true,
-			'get_case_data_ajax' => true
+			'get_case_data_ajax' => true,
+			'get_image'			=> true,
+			'get_case_image'	=> true,
+			'add_component_image'=> true,
+			'add_case_image'	=> true,
+			'edit_component_child' => true,
+			'edit_parent_component'	=> true
 		);
 
 		function __construct()
@@ -107,8 +114,546 @@
 			{
 				$GLOBALS['phpgw_info']['flags']['noframework'] = true;
 			}
+			$this->vfs = CreateObject('phpgwapi.vfs');
+
 //			$GLOBALS['phpgw']->css->add_external_file('controller/templates/base/css/base.css');
 		}
+
+
+		function edit_parent_component()
+		{
+			return $this->edit_component_child(true);
+		}
+
+		function edit_component_child($edit_parent = false)
+		{
+			if(!$this->edit )
+			{
+				phpgw::no_access();
+			}
+
+			$get_form = phpgw::get_var('get_form', 'bool');
+			$get_edit_form = phpgw::get_var('get_edit_form', 'bool');
+			$get_info = phpgw::get_var('get_info', 'bool');
+			$parent_location_id = phpgw::get_var('parent_location_id', 'int');
+			$parent_component_id = phpgw::get_var('parent_component_id', 'int');
+			$location_id = phpgw::get_var('location_id', 'int');
+			$component_id = phpgw::get_var('component_id', 'int');
+
+			$system_location = $GLOBALS['phpgw']->locations->get_name($location_id);
+			$system_location_arr = explode('.', $system_location['location']);
+			$entity_id		= 	$system_location_arr[2];
+			$cat_id			= 	$system_location_arr[3];
+
+			$values = array();
+			$custom = createObject('property.custom_fields');
+			$values['attributes'] = $custom->find('property', $system_location['location'], 0, '', 'ASC', 'attrib_sort', true, true);
+
+
+			if($get_form || $get_edit_form || $get_info)
+			{
+				$soentity = CreateObject('property.soentity', $entity_id, $cat_id);
+
+				if($component_id)
+				{
+					$values = $soentity->read_single(array('location_id' => $location_id, 'id' => $component_id), $values);
+				}
+
+				$values = $custom->prepare($values, 'property', $system_location['location'], false);
+
+				$menuaction = $edit_parent ? 'controller.uicase.edit_parent_component' : 'controller.uicase.edit_component_child';
+
+				$data = array(
+					'action'=> self::link(array('menuaction' => $menuaction, 'phpgw_return_as'=>'json')),
+					'edit_parent' => $edit_parent,
+					'parent_location_id' => $parent_location_id,
+					'parent_component_id' => $parent_component_id,
+					'location_id' => $location_id,
+					'component_id'=> $component_id,
+					'attributes_general' => array('attributes' => $values['attributes']),
+					'get_form'	=> $get_form,
+					'get_info'	=> $get_info,
+					'get_edit_form' => $get_edit_form
+					);
+
+				$xslttemplates = CreateObject('phpgwapi.xslttemplates');
+
+				$xslttemplates->add_file(array(PHPGW_SERVER_ROOT . '/controller/templates/base/new_component'));
+				if($get_form || $get_edit_form)
+				{
+					$xslttemplates->add_file(array(PHPGW_SERVER_ROOT . '/property/templates/base/attributes_form'));
+				}
+				else
+				{
+					$xslttemplates->add_file(array(PHPGW_SERVER_ROOT . '/property/templates/base/attributes_view'));
+				}
+
+				$xslttemplates->set_var('phpgw', array('new_component' => $data));
+
+
+				$xslttemplates->set_output('html');
+				$xslttemplates->xsl_parse();
+				$xslttemplates->xml_parse();
+
+				$xml = new DOMDocument;
+				$xml->loadXML($xslttemplates->xmldata);
+				$xsl = new DOMDocument;
+				$xsl->loadXML($xslttemplates->xsldata);
+
+				// Configure the transformer
+				$proc = new XSLTProcessor;
+				$proc->registerPHPFunctions(); // enable php functions
+				$proc->importStyleSheet($xsl); // attach the xsl rules
+
+
+				$html = trim($proc->transformToXML($xml));
+				$html = preg_replace('/<\?xml version([^>])+>/', '', $html);
+				$html = preg_replace('/<!DOCTYPE([^>])+>/', '', $html);
+
+				return $html;
+			}
+
+			if($_POST && !$parent_location_id && !$parent_component_id && $component_id)
+			{
+				$soentity = CreateObject('property.soentity', $entity_id, $cat_id);
+				$item = $soentity->read_single(array('location_id' => $location_id, 'id' => $component_id));
+				$parent_component_id = (int)$values['p_num'];
+				$parent_location_id = $GLOBALS['phpgw']->locations->get_id('property', ".entity.{$values['p_entity_id']}.{$values['p_cat_id']}");
+			}
+
+			if($_POST && ( ($parent_location_id && $parent_component_id) || $edit_parent) )
+			{
+				$values = array();
+
+				$parent_system_location = $GLOBALS['phpgw']->locations->get_name($parent_location_id);
+
+				$parent_system_location_arr = explode('.', $parent_system_location['location']);
+				$p_entity_id	= 	$parent_system_location_arr[2];
+				$p_cat_id		= 	$parent_system_location_arr[3];
+
+				$soentity = CreateObject('property.soentity', $entity_id, $cat_id);
+				
+				if($parent_location_id)
+				{
+					$parent_item = $soentity->read_single(array('location_id' => $parent_location_id, 'id' => $parent_component_id));
+				}
+				else//self
+				{
+					$parent_item = $soentity->read_single(array('location_id' => $location_id, 'id' => $component_id));
+				}
+
+				$values['extra']['p_entity_id'] = $p_entity_id;
+				$values['extra']['p_cat_id'] = $p_cat_id;
+				$values['extra']['p_num'] = $parent_component_id;
+
+				$values['location_code'] = $parent_item['location_code'];
+
+				$location_data = createObject('property.solocation')->get_location_data($parent_item['location_code']);
+
+				$values = array_merge($values, $location_data);
+
+				$values_attribute = $custom->convert_attribute_save((array)phpgw::get_var('values_attribute'));
+
+				if($component_id)
+				{
+					$values['id'] = $component_id;
+					$receipt = $soentity->edit($values, $values_attribute, $entity_id, $cat_id);
+				}
+				else
+				{
+					$receipt = $soentity->add($values, $values_attribute, $entity_id, $cat_id);
+				}
+
+				if($receipt['id'])
+				{
+					$property_soadmin_entity = createObject('property.soadmin_entity');
+					$location_children = $property_soadmin_entity->get_children( $p_entity_id, $p_cat_id, 0, '' );
+
+					$component_children = array();
+					foreach ($location_children as $key => &$location_children_info)
+					{
+						$location_children_info['parent_location_id'] = $parent_location_id;
+						$location_children_info['parent_component_id'] = $parent_component_id;
+
+						$_component_children = $soentity->get_eav_list(array
+						(
+							'location_id' => $location_children_info['location_id'],
+							'parent_location_id' => $parent_location_id,
+							'parent_id' => $parent_component_id,
+							'allrows'	=> true
+						));
+
+						$component_children = array_merge($component_children, $_component_children);
+					}
+
+					if($component_children)
+					{
+						$short_description = array();
+						foreach ($component_children as $_value)
+						{
+							$short_description[] = $_value['short_description'];
+						}
+
+						array_multisort($short_description, SORT_ASC, $component_children);
+
+						array_unshift($component_children, array('id' => '', 'short_description' => lang('select')));
+					}
+
+					return array(
+						'status' => 'saved',
+						'message' => lang('saved'),
+						'component_children' => $component_children
+						);
+				}
+				else
+				{
+					return array(
+						'status' => 'saved',
+						'message' => lang('error')
+						);
+
+				}
+			}
+
+			return lang('error');
+
+		}
+
+		function resize_image( $source, $dest, $target_height = 800 )
+		{
+			$size = getimagesize($source);
+			$width = $size[0];
+			$height = $size[1];
+
+
+			$target_width = round($width * ($target_height / $height));
+
+			$x = 0;
+			$y = 0;
+
+//			if ($width > $height)
+//			{
+//				$x = ceil(($width - $height) / 2);
+//				$width = $height;
+//			}
+//			else if ($height > $width)
+//			{
+//				$y = ceil(($height - $width) / 2);
+//				$height = $width;
+//			}
+
+			$new_im = ImageCreatetruecolor($target_width, $target_height);
+
+			@$imgInfo = getimagesize($source);
+
+			if ($imgInfo[2] == IMAGETYPE_JPEG)
+			{
+				$im = imagecreatefromjpeg($source);
+				imagecopyresampled($new_im, $im, 0, 0, $x, $y, $target_width, $target_height, $width, $height);
+				imagejpeg($new_im, $dest, 95); // Thumbnail quality (Value from 1 to 100)
+			}
+			else if ($imgInfo[2] == IMAGETYPE_GIF)
+			{
+				$im = imagecreatefromgif($source);
+				imagecopyresampled($new_im, $im, 0, 0, $x, $y, $target_width, $target_height, $width, $height);
+				imagegif($new_im, $dest);
+			}
+			else if ($imgInfo[2] == IMAGETYPE_PNG)
+			{
+				$im = imagecreatefrompng($source);
+				imagecopyresampled($new_im, $im, 0, 0, $x, $y, $target_width, $target_height, $width, $height);
+				imagepng($new_im, $dest);
+			}
+		}
+
+		function is_image( $fileName )
+		{
+			// Verifies that a file is an image
+			if ($fileName !== '.' && $fileName !== '..')
+			{
+				@$imgInfo = getimagesize($fileName);
+
+				$imgType = array
+					(
+					IMAGETYPE_JPEG,
+					IMAGETYPE_GIF,
+					IMAGETYPE_PNG,
+				);
+
+				if (in_array($imgInfo[2], $imgType))
+				{
+					return true;
+				}
+				return false;
+			}
+		}
+
+		function add_case_image()
+		{
+			if(!$this->edit )
+			{
+				phpgw::no_access();
+			}
+
+			$case_id = phpgw::get_var('case_id', 'int');
+
+			if (isset($_FILES['file']['name']) && $_FILES['file']['name'])
+			{
+
+				if ($this->is_image($_FILES['file']['tmp_name']))
+				{
+					$this->resize_image($_FILES['file']['tmp_name'], $_FILES['file']['tmp_name'], $thumb_size = 800);
+				}
+
+				$file_name = str_replace(' ', '_', $_FILES['file']['name']);
+
+				$bofiles = CreateObject('property.bofiles', '/controller/case');
+				$to_file = "{$bofiles->fakebase}/{$case_id}/{$file_name}";
+
+				if ($bofiles->vfs->file_exists(array
+						(
+						'string' => $to_file,
+						'relatives' => Array(RELATIVE_NONE)
+					)))
+				{
+					return array(
+						'status' => 'error',
+						'message' => lang('This file already exists !')
+						);
+				}
+				else
+				{
+					$from_file = $_FILES['file']['tmp_name'];
+					$bofiles->create_document_dir("$case_id");
+					$bofiles->vfs->override_acl = 1;
+
+					if ($bofiles->vfs->cp(array(
+							'from' => $from_file,
+							'to' => $to_file,
+							'relatives' => array(RELATIVE_NONE | VFS_REAL, RELATIVE_ALL))))
+					{
+						$bofiles->vfs->override_acl = 0;
+						return array(
+							'status' => 'saved',
+							'message' => lang('saved')
+							);
+					}
+				}
+
+				return array(
+					'status' => 'error',
+					'message' => lang('Failed to upload file !')
+					);
+
+			}
+		}
+
+		function add_component_image()
+		{
+			if(!$this->edit )
+			{
+				phpgw::no_access();
+			}
+
+			$component_arr = explode("_", phpgw::get_var('component'));
+
+			$location_id = $component_arr[0];
+			$id	 = $component_arr[1];
+			if (empty($id))
+			{
+				throw new Exception('controller_uicase::_add_component_image() - missing id');
+			}
+
+			$soentity = createObject('property.soentity');
+
+			$location_code = $soentity->get_location_code($location_id, $id);
+			$location_arr = explode('-', $location_code);
+			$loc1 = !empty($location_arr[0]) ? $location_arr[0] : 'dummy';
+
+			$system_location = $GLOBALS['phpgw']->locations->get_name($location_id);
+			$system_location_arr = explode('.', $system_location['location']);
+			$category_dir = "{$system_location_arr[1]}_{$system_location_arr[2]}_{$system_location_arr[3]}";
+
+			$bofiles = CreateObject('property.bofiles');
+
+//			if (isset($values['file_action']) && is_array($values['file_action']))
+//			{
+//				$bofiles->delete_file("/{$category_dir}/{$loc1}/{$id}/" ,$values);
+//			}
+
+			$files = array();
+			if (isset($_FILES['file']['name']) && $_FILES['file']['name'])
+			{
+				if ($this->is_image($_FILES['file']['tmp_name']))
+				{
+					$this->resize_image($_FILES['file']['tmp_name'], $_FILES['file']['tmp_name'], $thumb_size = 800);
+				}
+
+				$file_name = str_replace(' ', '_', $_FILES['file']['name']);
+				$to_file = "{$bofiles->fakebase}/{$category_dir}/{$loc1}/{$id}/{$file_name}";
+
+				if ($bofiles->vfs->file_exists(array
+						(
+						'string' => $to_file,
+						'relatives' => Array(RELATIVE_NONE)
+					)))
+				{
+					$this->receipt['error'][] = array('msg' => lang('This file already exists !'));
+				}
+				else
+				{
+					$from_file = $_FILES['file']['tmp_name'];
+					$bofiles->create_document_dir("{$category_dir}/{$loc1}/{$id}");
+					$bofiles->vfs->override_acl = 1;
+
+					if ($bofiles->vfs->cp(array(
+							'from' => $from_file,
+							'to' => $to_file,
+							'relatives' => array(RELATIVE_NONE | VFS_REAL, RELATIVE_ALL))))
+					{
+						$bofiles->vfs->override_acl = 0;
+						return array(
+							'status' => 'saved',
+							'message' => lang('saved')
+							);
+					}
+				}
+
+				return array(
+					'status' => 'error',
+					'message' => lang('Failed to upload file !')
+					);
+
+			}
+		}
+
+		function get_case_image()
+		{
+			if(!$this->read )
+			{
+				phpgw::no_access();
+			}
+
+			$dry_run = phpgw::get_var('dry_run', 'bool');
+			$case_id = phpgw::get_var('case_id', 'int');
+
+			$this->vfs->override_acl = 1;
+
+			$files = $this->vfs->ls(array(
+				'orderby' => 'file_id',
+	//			'mime_type'	=> 'image/jpeg',
+				'string' => "/controller/case/{$case_id}",
+				'relatives' => array(RELATIVE_NONE)));
+
+			$this->vfs->override_acl = 0;
+
+			$file = end($files);
+
+			if($dry_run)
+			{
+				if(!empty($file['file_id']))
+				{
+					return array(
+						'status' => '200',
+						'message' => lang('file found'),
+						'file_id' => $file['file_id']
+						);
+					}
+				else
+				{
+					return array(
+						'status' => '404',
+						'message' => lang('file not found')
+						);
+				}
+			}
+
+			if(!empty($file['file_id']))
+			{
+				ExecMethod('property.bofiles.get_file', $file['file_id']);
+			}
+		}
+
+		function get_case_images($case_id)
+		{
+			$this->vfs->override_acl = 1;
+
+			$files = $this->vfs->ls(array(
+				'orderby' => 'file_id',
+				'string' => "/controller/case/{$case_id}",
+				'relatives' => array(RELATIVE_NONE)));
+
+			$this->vfs->override_acl = 0;
+			return $files;
+		}
+
+		function get_image()
+		{
+			if(!$this->read )
+			{
+				phpgw::no_access();
+			}
+
+			$file_id = phpgw::get_var('file_id', 'int');
+
+			if($file_id)
+			{
+				ExecMethod('property.bofiles.get_file', $file_id);
+				return;
+			}
+
+			$dry_run = phpgw::get_var('dry_run', 'bool');
+			$component_arr = explode("_", phpgw::get_var('component'));
+
+			$location_id = $component_arr[0];
+			$item_id	 = $component_arr[1];
+
+			$soentity = createObject('property.soentity');
+
+			$location_code = $soentity->get_location_code($location_id, $item_id);
+			$location_arr = explode('-', $location_code);
+			$loc1 = !empty($location_arr[0]) ? $location_arr[0] : 'dummy';
+
+			$system_location = $GLOBALS['phpgw']->locations->get_name($location_id);
+			$system_location_arr = explode('.', $system_location['location']);
+			$category_dir = "{$system_location_arr[1]}_{$system_location_arr[2]}_{$system_location_arr[3]}";
+
+			$this->vfs->override_acl = 1;
+
+			$files = $this->vfs->ls(array(
+				'orderby' => 'file_id',
+				'mime_type'	=> 'image/jpeg',
+				'string' => "/property/{$category_dir}/{$loc1}/{$item_id}",
+				'relatives' => array(RELATIVE_NONE)));
+
+			$this->vfs->override_acl = 0;
+
+			$file = end($files);
+
+			if($dry_run)
+			{
+				if(!empty($file['file_id']))
+				{
+					return array(
+						'status' => '200',
+						'message' => lang('file found')
+						);
+					}
+				else
+				{
+					return array(
+						'status' => '404',
+						'message' => lang('file not found')
+						);
+				}
+			}
+
+			if(!empty($file['file_id']))
+			{
+				ExecMethod('property.bofiles.get_file', $file['file_id']);
+			}
+		}
+
 
 		private function _get_case_data()
 		{
@@ -154,13 +699,14 @@
 				$component = new controller_component();
 				$component->set_location_code($component_arr['location_code']);
 				$component->set_xml_short_desc($short_desc);
+				$component->set_id($component_id);
+				$component->set_location_id($location_id);
 				$component_array = $component->toArray();
 
 				$type = 'component';
 				$building_location_code = $this->location_finder->get_building_location_code($component_arr['location_code']);
 				$buildings_on_property = array();
 
-///
 				$system_location_arr = explode('.', $location_info['location']);
 
 				$property_soadmin_entity = createObject('property.soadmin_entity');
@@ -168,17 +714,37 @@
 				$property_soentity = createObject('property.soentity');
 
 				$component_children = array();
-				foreach ($location_children as $key => $location_children_info)
+				foreach ($location_children as $key => &$location_children_info)
 				{
+					$location_children_info['parent_location_id'] = $location_id;
+					$location_children_info['parent_component_id'] = $component_id;
+
 					$_component_children = $property_soentity->get_eav_list(array
 					(
 						'location_id' => $location_children_info['location_id'],
+						'parent_location_id' => $location_id,
+						'parent_id' => $component_id,
 						'allrows'	=> true
 					));
 
 					$component_children = array_merge($component_children, $_component_children);
 				}
-//
+
+				if($location_children)
+				{
+					$short_description = array();
+					foreach ($component_children as $_value)
+					{
+						$short_description[] = $_value['short_description'];
+					}
+
+					array_multisort($short_description, SORT_ASC, $component_children);
+
+					array_unshift($component_children, array('id' => '', 'short_description' => lang('select')));
+				}
+
+//				_debug_array($component_children);
+
 			}
 			else
 			{
@@ -319,6 +885,7 @@
 				'check_list' => $check_list,
 				'buildings_on_property' => $buildings_on_property,
 				'component_children'	=> $component_children,
+				'location_children'	=> $location_children,
 				'location_array' => $location_array,
 				'component_array' => $component_array,
 				'control_groups_with_items_array' => $control_groups_with_items_array,
@@ -360,6 +927,7 @@
 				'location_array' => $case_data['location_array'],
 				'component_array' => $case_data['component_array'],
 				'component_children' => $case_data['component_children'],
+				'location_children' => $case_data['location_children'],
 				'control_groups_with_items_array' => $case_data['control_groups_with_items_array'],
 				'type' => $case_data['type'],
 				'location_level' => $level,
@@ -375,12 +943,13 @@
 //			_debug_array($data);die();
 			phpgwapi_jquery::load_widget('core');
 
-			self::add_javascript('controller', 'controller', 'custom_ui.js');
-			self::add_javascript('controller', 'controller', 'ajax.js');
-			self::add_javascript('controller', 'controller', 'case.js');
-			self::add_javascript('controller', 'controller', 'check_list.js');
-			self::add_javascript('controller', 'controller', 'check_list_update_status.js');
-
+			self::add_javascript('controller', 'base', 'edit_component.js');
+			self::add_javascript('controller', 'base', 'custom_ui.js');
+			self::add_javascript('controller', 'base', 'ajax.js');
+			self::add_javascript('controller', 'base', 'case.js');
+			self::add_javascript('controller', 'base', 'check_list.js');
+			self::add_javascript('controller', 'base', 'check_list_update_status.js');
+			phpgwapi_jquery::formvalidator_generate(array('location','date', 'security', 'file'));
 			self::render_template_xsl(array('check_list/fragments/check_list_menu', 'check_list/fragments/nav_control_plan',
 				'check_list/fragments/check_list_top_section', 'case/add_case',
 				'check_list/fragments/select_buildings_on_property',
@@ -393,8 +962,7 @@
 			$case_location_code = phpgw::get_var('location_code');
 			$case_data = $this->_get_case_data();
 
-			$control_groups_with_items_array;
-			return json_encode(array("control_groups_with_items_array" => $case_data['control_groups_with_items_array']));
+			return array("control_groups_with_items_array" => $case_data['control_groups_with_items_array']);
 		}
 
 		function save_case_ajax()
@@ -407,6 +975,7 @@
 			$check_list_id = phpgw::get_var('check_list_id');
 			$control_item_id = phpgw::get_var('control_item_id');
 			$case_descr = phpgw::get_var('case_descr');
+			$proposed_counter_measure =  phpgw::get_var('proposed_counter_measure');
 			$type = phpgw::get_var('type');
 			$status = phpgw::get_var('status');
 			$location_code = phpgw::get_var('location_code');
@@ -457,6 +1026,7 @@
 			$case = new controller_check_item_case();
 			$case->set_check_item_id($check_item->get_id());
 			$case->set_descr($case_descr);
+			$case->set_proposed_counter_measure($proposed_counter_measure);
 			$case->set_user_id($user_id);
 			$case->set_entry_date($todays_date_ts);
 			$case->set_modified_date($todays_date_ts);
@@ -487,12 +1057,21 @@
 				$option_value = phpgw::get_var('option_value');
 				$case->set_measurement($option_value);
 			}
+			else if ($type == 'control_item_type_5')
+			{
+				$option_value = phpgw::get_var('option_value');
+				$case->set_measurement(serialize($option_value));
+			}
 
 			$case_id = $this->so->store($case);
 
 			if ($case_id > 0)
 			{
-				return json_encode(array("status" => "saved"));
+				return json_encode(array
+					(
+					"status" => "saved",
+					'case_id' => $case_id
+					));
 			}
 			else
 			{
@@ -509,6 +1088,7 @@
 
 			$case_id = phpgw::get_var('case_id');
 			$case_descr = phpgw::get_var('case_descr');
+			$proposed_counter_measure =  phpgw::get_var('proposed_counter_measure');
 			$case_status = phpgw::get_var('case_status');
 			$measurement = phpgw::get_var('measurement');
 			$check_list_id = phpgw::get_var('check_list_id');
@@ -520,8 +1100,16 @@
 
 			$case = $this->so->get_single($case_id);
 			$case->set_descr($case_descr);
+			$case->set_proposed_counter_measure($proposed_counter_measure);
 			$case->set_modified_date($todays_date_ts);
-			$case->set_measurement($measurement);
+			if($measurement && is_array($measurement))
+			{
+				$case->set_measurement(serialize($measurement));
+			}
+			else
+			{
+				$case->set_measurement($measurement);
+			}
 			$case->set_status($case_status);
 			$case->set_condition_degree($condition_degree);
 			$case->set_consequence($consequence);
@@ -597,6 +1185,8 @@
 						}
 
 						$case->set_component_descr($short_desc);
+						$case_files = $this->get_case_images($case->get_id());
+						$case->set_case_files($case_files);
 					}
 				}
 			}
@@ -607,8 +1197,12 @@
 			$catsObj = CreateObject('phpgwapi.categories', -1, 'property', '.ticket');
 			$catsObj->supress_info = true;
 
+			$config = CreateObject('phpgwapi.config', 'controller');
+			$config->read();
+
+			$ticket_category = $config->config_data['ticket_category'];
 			$categories = $catsObj->formatted_xslt_list(array('select_name' => 'values[cat_id]',
-				'selected' => $this->cat_id, 'use_acl' => $this->_category_acl));
+				'selected' => $ticket_category, 'use_acl' => $this->_category_acl));
 
 			$component_id = $check_list->get_component_id();
 
@@ -661,8 +1255,10 @@
 			$year = date("Y", $check_list->get_deadline());
 			$month = date("n", $check_list->get_deadline());
 
+
 			$data = array
-				(
+			(
+
 				'categories' => $categories,
 				'check_list' => $check_list->toArray(),
 				'control' => $control->toArray(),
@@ -675,8 +1271,10 @@
 				'type' => $type,
 				'get_locations'	=> $get_locations,
 				'location_level' => $level,
+				'degree_list' => array('options' => createObject('property.borequest')->select_degree_list()),
+				'consequence_list' => array('options' => createObject('property.borequest')->select_consequence_list())
 			);
-
+//			_debug_array($check_items_and_cases);die();
 			if (count($buildings_array) > 0)
 			{
 				$data['buildings_array'] = $buildings_array;
@@ -688,9 +1286,10 @@
 
 			phpgwapi_jquery::load_widget('core');
 
-			self::add_javascript('controller', 'controller', 'custom_ui.js');
-			self::add_javascript('controller', 'controller', 'ajax.js');
-			self::add_javascript('controller', 'controller', 'check_list_update_status.js');
+			self::add_javascript('controller', 'base', 'edit_component.js');
+			self::add_javascript('controller', 'base', 'custom_ui.js');
+			self::add_javascript('controller', 'base', 'ajax.js');
+			self::add_javascript('controller', 'base', 'check_list_update_status.js');
 
 			self::render_template_xsl(array('check_list/fragments/check_list_menu', 'case/create_case_message'), $data);
 		}
@@ -743,6 +1342,7 @@
 				$group_name = $control_group->get_group_name();
 				$component_location_id = $case->get_component_location_id();
 
+				$message_details .= "Ref: {$case_id}: \n";
 				$message_details .= "{$group_name}::Gjøremål {$counter}: \n";
 
 				if ($component_id = $case->get_component_id())
@@ -783,7 +1383,14 @@
 					$message_details .= lang('consequence') . ': ' . $case->get_consequence() . "\n";
 				}
 
-				$message_details .= 'Hva: ' . $case->get_descr() . "\n\n";
+				$message_details .= 'Hva: ' . $case->get_descr() . "\n";
+
+				if($case->get_proposed_counter_measure())
+				{
+					$message_details .= lang('proposed counter measure') . ': ' . $case->get_proposed_counter_measure() . "\n";
+				}
+
+				$message_details .= "\n";
 				$counter++;
 			}
 
@@ -847,6 +1454,46 @@
 				$case->set_location_id($location_id_ticket);
 				$case->set_location_item_id($message_ticket_id);
 				$this->so->store($case);
+			}
+
+			/*
+			 * Transfer pictures
+			 */
+			$bofiles = CreateObject('property.bofiles', '');
+			$files = array();
+			foreach ($case_ids as $case_id)
+			{
+				$files = $this->get_case_images($case_id);
+				foreach ($files as $file)
+				{
+					$file_name = "{$case_id}_{$file['name']}";
+
+					$to_file = "/property/fmticket/{$message_ticket_id}/{$case_id}_{$file['name']}";
+					$from_file = "{$file['directory']}/{$file['name']}";
+
+					if ($bofiles->vfs->file_exists(array(
+							'string' => $to_file,
+							'relatives' => array(RELATIVE_NONE)
+						)))
+					{
+						$receipt['error'][] = array('msg' => lang('This file already exists !'));
+						phpgwapi_cache::message_set($file_name . ': ' . lang('This file already exists !'), 'error');
+					}
+					else
+					{
+						$bofiles->create_document_dir("fmticket/{$message_ticket_id}");
+						$bofiles->vfs->override_acl = 1;
+
+						if (!$bofiles->vfs->cp(array(
+								'from' => $from_file,
+								'to' => $to_file,
+								'relatives' => array(RELATIVE_NONE, RELATIVE_NONE))))
+						{
+							phpgwapi_cache::message_set($file_name . ': ' . lang('Failed to upload file !'), 'error');
+						}
+						$bofiles->vfs->override_acl = 0;
+					}
+				}
 			}
 
 			$this->redirect(array('menuaction' => 'controller.uicase.view_case_message', 'check_list_id' => $check_list_id,
@@ -942,10 +1589,10 @@
 			);
 
 			phpgwapi_jquery::load_widget('core');
-
-			self::add_javascript('controller', 'controller', 'custom_ui.js');
-			self::add_javascript('controller', 'controller', 'ajax.js');
-			self::add_javascript('controller', 'controller', 'check_list_update_status.js');
+			self::add_javascript('controller', 'base', 'edit_component.js');
+			self::add_javascript('controller', 'base', 'custom_ui.js');
+			self::add_javascript('controller', 'base', 'ajax.js');
+			self::add_javascript('controller', 'base', 'check_list_update_status.js');
 
 			self::render_template_xsl(array('check_list/fragments/check_list_menu', 'case/view_case_message'), $data);
 		}
@@ -1073,7 +1720,6 @@
 			if ($component_id > 0)
 			{
 				$location_id = $check_list->get_location_id();
-				$component_id = $check_list->get_component_id();
 				$location_info = $GLOBALS['phpgw']->locations->get_name($location_id);
 
 				if (substr($location_info['location'], 1, 8) == 'location')
@@ -1124,6 +1770,10 @@
 
 			$open_check_items_and_cases = $this->so_check_item->get_check_items_with_cases($check_list_id, $_type = null, 'open_or_waiting', null, $case_location_code);
 
+			$historic_location_code = $case_location_code ? $case_location_code : $check_list_location_code;
+			$open_old_cases =  $this->so_check_item->get_check_items_with_cases($check_list_id, $_type = null, 'open_or_waiting_old', null, $historic_location_code, $component_id);
+
+			$open_check_items_and_cases = array_merge($open_check_items_and_cases, $open_old_cases);
 
 			if ($buildings_on_property)
 			{
@@ -1139,6 +1789,13 @@
 
 				foreach ($check_item->get_cases_array() as $case)
 				{
+					$measurement = $case->get_measurement();
+
+					if(unserialize($measurement))
+					{
+						$case->set_measurement(unserialize($measurement));
+					}
+
 					$component_location_id = $case->get_component_location_id();
 					$component_id = $case->get_component_id();
 					if ($component_id)
@@ -1167,13 +1824,16 @@
 							}
 						}
 						$case->set_component_descr($short_desc);
+
 					}
+					$case_files = $this->get_case_images($case->get_id());
+					$case->set_case_files($case_files);
 				}
 
 				$check_item->get_control_item()->set_options_array($control_item_with_options->get_options_array());
 				$open_check_items_and_cases[$key] = $check_item;
 			}
-
+//			_debug_array($open_check_items_and_cases);die();
 			$data = array
 				(
 				'control' => $control,
@@ -1192,10 +1852,11 @@
 				'degree_list' => array('options' => createObject('property.borequest')->select_degree_list()),
 				'consequence_list' => array('options' => createObject('property.borequest')->select_consequence_list())
 			);
-
+//			_debug_array($open_check_items_and_cases); die();
 			phpgwapi_jquery::load_widget('core');
-			self::add_javascript('controller', 'controller', 'case.js');
-			self::add_javascript('controller', 'controller', 'check_list_update_status.js');
+			self::add_javascript('controller', 'base', 'edit_component.js');
+			self::add_javascript('controller', 'base', 'case.js');
+			self::add_javascript('controller', 'base', 'check_list_update_status.js');
 
 			self::render_template_xsl(array('check_list/fragments/check_list_menu', 'case/cases_tab_menu',
 				'case/view_open_cases', 'case/case_row',
@@ -1318,6 +1979,8 @@
 
 						}
 						$case->set_component_descr($short_desc);
+						$case_files = $this->get_case_images($case->get_id());
+						$case->set_case_files($case_files);
 					}
 				}
 				//		$check_item->get_control_item()->set_options_array( $control_item_with_options->get_options_array() );
@@ -1349,8 +2012,9 @@
 			);
 
 			phpgwapi_jquery::load_widget('core');
-			self::add_javascript('controller', 'controller', 'case.js');
-			self::add_javascript('controller', 'controller', 'check_list_update_status.js');
+			self::add_javascript('controller', 'base', 'edit_component.js');
+			self::add_javascript('controller', 'base', 'case.js');
+			self::add_javascript('controller', 'base', 'check_list_update_status.js');
 
 			self::render_template_xsl(array('check_list/fragments/check_list_menu', 'case/cases_tab_menu',
 				'case/view_closed_cases', 'case/case_row',

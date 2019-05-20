@@ -19,7 +19,8 @@
 		self.name="first_Window";
 		<xsl:value-of select="lookup_functions"/>
 		var my_groups = <xsl:value-of select="my_groups"/>;
-		var lang = <xsl:value-of select="php:function('js_lang', 'Please select a person or a group to handle the ticket !')"/>;
+		var account_lid =  '<xsl:value-of select="account_lid"/>';
+		var lang = <xsl:value-of select="php:function('js_lang', 'Please select a person or a group to handle the ticket !', 'From', 'To', 'Resource Type', 'Name', 'Accepted', 'Document', 'You must accept to follow all terms and conditions of lease first.')"/>;
 
 		function response_lookup()
 		{
@@ -27,6 +28,9 @@
 		var strURL = phpGWLink('index.php', oArgs);
 		TINY.box.show({iframe:strURL, boxid:"frameless",width:750,height:450,fixed:false,maskid:"darkmask",maskopacity:40, mask:true, animate:true, close: true});
 		}
+
+		var parent_cat_id = <xsl:value-of select="parent_cat_id"/>;
+
 	</script>
 
 	<dl>
@@ -95,33 +99,42 @@
 								</div>
 							</xsl:if>
 							<div class="pure-control-group">
+								<xsl:variable name="lang_on_behalf_of">
+									<xsl:value-of select="php:function('lang', 'on behalf of')"/>
+								</xsl:variable>
+								<label>
+									<xsl:value-of select="$lang_on_behalf_of"/>
+								</label>
+								<input type="hidden" id="set_on_behalf_of_lid" name="values[set_on_behalf_of_lid]"  value="{value_set_on_behalf_of_lid}"/>
+								<input type="text" id="set_on_behalf_of_name" name="values[set_on_behalf_of_name]" value="{value_set_on_behalf_of_name}" class="pure-input-1-2">
+									<xsl:attribute name="title">
+										<xsl:value-of select="php:function('lang', 'Enter username or ssn')"/>
+									</xsl:attribute>
+								</input>
+								<div id="set_on_behalf_of_container"/>
+							</div>
+							<div class="pure-control-group">
 								<xsl:variable name="lang_reverse">
 									<xsl:value-of select="php:function('lang', 'reverse')"/>
 								</xsl:variable>
 								<label>
 									<xsl:value-of select="$lang_reverse"/>
 								</label>
-								<input type="hidden" id="set_user_id" name="values[set_user_id]"  value="{value_set_user}"/>
-								<input type="text" id="set_user_name" name="values[set_user_name]" value="{value_set_user_name}" class="pure-input-1-2">
-								</input>
-								<div id="set_user_container"/>
+								<div class="pure-custom"  id="set_user_container"/>
 							</div>
-							<!--xsl:call-template name="contact_form"/-->
-							<!--div class="pure-control-group">
+							<div class="pure-control-group">
+								<xsl:variable name="lang_reverse_alternative">
+									<xsl:value-of select="php:function('lang', 'reverse alternative')"/>
+								</xsl:variable>
 								<label>
-									<xsl:value-of select="php:function('lang', 'Send e-mail')"/>
+									<xsl:value-of select="$lang_reverse_alternative"/>
 								</label>
-								<input type="checkbox" name="values[send_mail]" value="1">
-									<xsl:attribute name="title">
-										<xsl:value-of select="php:function('lang', 'Choose to send mailnotification')"/>
-									</xsl:attribute>
-									<xsl:if test="pref_send_mail = '1'">
-										<xsl:attribute name="checked">
-											<xsl:text>checked</xsl:text>
-										</xsl:attribute>
-									</xsl:if>
+								<input type="hidden" id="set_user_alternative_lid" name="values[set_user_alternative_lid]" />
+								<input type="text" id="set_user_alternative_name" name="values[set_user_alternative_name]" class="pure-input-1-2">
 								</input>
-							</div-->
+								<div class="pure-custom"  id="set_user_container_alternative"/>
+							</div>
+
 							<xsl:if test="disable_priority !='1'">
 								<div class="pure-control-group">
 									<label>
@@ -296,6 +309,8 @@
 		//	var initialSelection = <xsl:value-of select="resources_json"/>;
 		var lang = <xsl:value-of select="php:function('js_lang',  'Name', 'Address')"/>
 
+		var parent_cat_id = <xsl:value-of select="parent_cat_id"/>;
+
 		function open_print_view()
 		{
 		var oArgs = {menuaction:'helpdesk.uitts._print',id: $('#id').val()};
@@ -455,7 +470,7 @@
 								<label>
 									<xsl:value-of select="php:function('lang', 'Send e-mail')"/>
 								</label>
-								<input type="checkbox" name="values[send_mail]" value="1">
+								<input type="checkbox" id="send_email" name="values[send_mail]" value="1">
 									<xsl:attribute name="title">
 										<xsl:value-of select="php:function('lang', 'Choose to send mailnotification')"/>
 									</xsl:attribute>
@@ -498,6 +513,28 @@
 									<xsl:value-of select="php:function('lang', 'category')"/>
 								</label>
 								<xsl:call-template name="categories"/>
+							</div>
+							<div class="pure-control-group">
+								<label>
+									<xsl:value-of select="php:function('lang', 'change category')"/>
+								</label>
+								<select id="change category_id" name="change_category" class="pure-input-1-2" >
+									<xsl:attribute name="title">
+										<xsl:value-of select="php:function('lang', 'change category')"/>
+									</xsl:attribute>
+									<option value="">
+										<xsl:value-of select="php:function('lang', 'change category')"/>
+									</option>
+									<xsl:for-each select="cat_change_list">
+										<optgroup label="{label}">
+											<xsl:for-each select="options">
+												<option value="{id}" title="{title}">
+													<xsl:value-of disable-output-escaping="yes" select="name"/>
+												</option>
+											</xsl:for-each>
+										</optgroup>
+									</xsl:for-each>
+								</select>
 							</div>
 							<xsl:choose>
 								<xsl:when test="show_finnish_date ='1'">
@@ -545,6 +582,23 @@
 						</xsl:otherwise>
 					</xsl:choose>
 					<xsl:apply-templates select="custom_attributes/attributes"/>
+
+					<xsl:if  test="simple !='1'">
+						<div class="pure-control-group">
+							<label>
+								<xsl:value-of select="php:function('lang', 'publish text')"/>
+							</label>
+							<input type="checkbox" id="publish_text" name="values[publish_text]" value="1">
+								<xsl:attribute name="title">
+									<xsl:value-of select="php:function('lang', 'Check to publish text')"/>
+								</xsl:attribute>
+								<xsl:attribute name="checked">
+									<xsl:text>checked</xsl:text>
+								</xsl:attribute>
+							</input>
+						</div>
+					</xsl:if>
+
 					<div class="pure-control-group">
 						<xsl:choose>
 							<xsl:when test="simple !='1'">
@@ -654,6 +708,43 @@
 							</div>
 						</xsl:when>
 					</xsl:choose>
+					<xsl:if test="simple !='1'">
+						<div class="pure-control-group">
+							<label>
+								<xsl:value-of select="php:function('lang', 'external communication')"/>
+							</label>
+							<input type="hidden" id="external_communication" name="external_communication" value=""/>
+
+							<input type="button" class="pure-button pure-button-primary" name="init_external_communication" onClick="confirm_session('external_communication');">
+								<xsl:attribute name="value">
+									<xsl:value-of select="php:function('lang', 'new')"/>
+								</xsl:attribute>
+								<xsl:attribute name="title">
+									<xsl:value-of select="php:function('lang', 'external communication')"/>
+								</xsl:attribute>
+							</input>
+						</div>
+						<div class="pure-control-group">
+							<label>
+								<xsl:value-of select="php:function('lang', 'messages')"/>
+							</label>
+							<div class="pure-u-md-1-2" >
+								<xsl:for-each select="datatable_def">
+									<xsl:if test="container = 'datatable-container_7'">
+										<xsl:call-template name="table_setup">
+											<xsl:with-param name="container" select ='container'/>
+											<xsl:with-param name="requestUrl" select ='requestUrl'/>
+											<xsl:with-param name="ColumnDefs" select ='ColumnDefs'/>
+											<xsl:with-param name="data" select ='data'/>
+											<xsl:with-param name="tabletools" select ='tabletools' />
+											<xsl:with-param name="config" select ='config'/>
+										</xsl:call-template>
+									</xsl:if>
+								</xsl:for-each>
+							</div>
+						</div>
+					</xsl:if>
+
 				</fieldset>
 			</div>
 			<div id="notify">

@@ -37,6 +37,7 @@
 	 */
 	define('PHPGW_SQL_RETURN_SQL', 2);
 
+
 	/**
 	 * SQL Generator ENTITY - helps to construct queries statements
 	 *
@@ -69,25 +70,18 @@
 		var $ondebug;
 		var $table;
 
-		function __construct()
+		function __construct( $table = '', $alias = '')
 		{
+			$this->table = $table;
+			// Temp alias name, just if not empty
+			$this->alias = ($alias) ? $alias : $alias;
+			$this->ldebug('__construct', array('Table' => $table,
+				'Alias' => $alias));
 
 		}
 		/*		 * ***********************************************************\
 		 * Entity, class and general section                           *
 		  \************************************************************ */
-
-		/**
-		 * FIXME - wrong name of constructor
-		 */
-		public function _constructor( $table = '', $alias = '' )
-		{
-			$this->table = $table;
-			// Temp alias name, just if not empty
-			$this->alias = ($alias) ? $alias : $alias;
-			$this->ldebug('_constructor', array('Table' => $table,
-				'Alias' => $alias));
-		}
 
 		/**
 		 * Set the alias for the table
@@ -458,7 +452,7 @@
 		{
 			foreach ($entities as $entity_name)
 			{
-				$link = $this - get_ilink($entity_name);
+				$link = $this->get_ilink($entity_name);
 				$field = $this->real_field($link['lfield']);
 				$fields_to_prototype[$field] = '{' . $link['lfield'] . '}';
 			}

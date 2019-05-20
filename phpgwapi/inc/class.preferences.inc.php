@@ -267,6 +267,7 @@
 			}
 			else
 			{
+//				$metadata = $this->db->metadata('phpgw_preferences');
 				$this->db->query('SELECT * FROM phpgw_preferences WHERE preference_owner IN (-1,-2,'.intval($this->account_id).')',__LINE__,__FILE__);
 
 				$this->forced = $this->default = $this->user = array();
@@ -274,7 +275,16 @@
 				{
 					// The following ereg is required for PostgreSQL to work
 					$app = str_replace(' ','',$this->db->f('preference_app'));
-					$value = unserialize($this->db->f('preference_value'));
+
+//					if(!isset($metadata['preference_json']))
+//					{
+//						$value = unserialize($this->db->f('preference_value'));
+//					}
+//					else
+					{
+						$value = json_decode($this->db->f('preference_json'), true);
+					}
+
 					$this->unquote($value);
 					if (!is_array($value))
 					{
@@ -620,16 +630,43 @@
 				$this->db->query("delete from phpgw_preferences where preference_owner='$account_id'",
 						__LINE__,__FILE__);
 
+				/**
+				 * Temporary
+				 */
+//				$metadata = $this->db->metadata('phpgw_preferences');
+
 				foreach($prefs as $app => $value)
 				{
-					if (!is_array($value)) continue;
+					if (!is_array($value))
+					{
+						continue;
+					}
 					$this->quote($value);
-					$value = $this->db->db_addslashes(serialize($value));	// this addslashes is for the database
-					$app = $this->db->db_addslashes($app);
 
-					$this->db->query("INSERT INTO phpgw_preferences".
-							" (preference_owner,preference_app,preference_value)".
-							" VALUES ($account_id,'$app','$value')",__LINE__,__FILE__);
+//					if(!isset($metadata['preference_json']))
+//					{
+//						$value = $this->db->db_addslashes(serialize($value));	// this addslashes is for the database
+//						$app = $this->db->db_addslashes($app);
+//
+//						$this->db->query("INSERT INTO phpgw_preferences".
+//								" (preference_owner,preference_app,preference_value)".
+//								" VALUES ($account_id,'$app','$value')",__LINE__,__FILE__);
+//					}
+//					else
+					{
+						$value_set = array
+						(
+							'preference_owner' => $account_id,
+							'preference_app'	=> $app,
+							'preference_json'	=> json_encode($value)
+						);
+
+						$cols = implode(',', array_keys($value_set));
+						$insert_values = $this->db->validate_insert(array_values($value_set));
+
+						$this->db->query("INSERT INTO phpgw_preferences ({$cols}) VALUES ({$insert_values})", __LINE__, __FILE__);
+
+					}
 				}
 
 				if ( !$this->global_lock )
@@ -735,10 +772,11 @@
 		{
 			$preferences_update = False;
 			if ( !is_array($GLOBALS['phpgw_info']['user']['preferences']) 
-				|| isset($GLOBALS['phpgw_info']['server']['cache_phpgw_info']) )
+//				|| isset($GLOBALS['phpgw_info']['server']['cache_phpgw_info'])
+				)
 			{
 				$GLOBALS['phpgw_info']['user']['preferences'] = $this->read_repository();
-				$preferences_update = True;
+//				$preferences_update = True;
 			}
 			/* This takes care of new users who dont have proper default prefs setup */
 			if (!isset($GLOBALS['phpgw_info']['user']['preferences']['common']['maxmatchs']) ||
@@ -756,7 +794,7 @@
 			if (!isset($GLOBALS['phpgw_info']['user']['preferences']['common']['template_set']) ||
 					!$GLOBALS['phpgw_info']['user']['preferences']['common']['template_set'])
 			{
-				$this->add('common','template_set','verdilak');
+				$this->add('common','template_set','portico');
 				$preferences_update = True;
 			}
 			if (!isset($GLOBALS['phpgw_info']['user']['preferences']['common']['dateformat']) ||
@@ -781,7 +819,7 @@
 			{
 			//	$this->update_data($user_prefs); // doing nothing?
 				$this->save_repository();
-				$GLOBALS['phpgw_info']['preferences'] = $this->read_repository();
+				$GLOBALS['phpgw_info']['user']['preferences'] = $this->read_repository();
 			}
 		}
 

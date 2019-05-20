@@ -5,7 +5,16 @@ $(document).ready(function ()
 {
 	$("#start_date").change(function ()
 	{
-		$("#end_date").val($("#start_date").val());
+//		if(!$("#end_date").val())
+		{
+			var temp_start_date =   $( "#start_date" ).datetimepicker('getValue');
+//			console.log(temp_start_date);
+			$("#end_date").val($("#start_date").val());
+
+			$('#end_date').datetimepicker('setOptions', {
+				startDate: new Date(temp_start_date)
+			});
+		}
 	});
 
 
@@ -284,7 +293,8 @@ function populateTableChkResources(building_id, selection)
 		menuaction: 'bookingfrontend.uiresource.index_json',
 		sort: 'name',
 //		sub_activity_id: $("#field_activity").val(),
-		filter_building_id: building_id
+		filter_building_id: building_id,
+		length: -1
 	};
 	var url = phpGWLink('bookingfrontend/', oArgs, true);
 	var container = 'resources_container';
@@ -298,7 +308,14 @@ function populateTableChkResources(building_id, selection)
 
 function populateTableChkRegulations(building_id, selection, resources)
 {
-	var url = 'index.php?menuaction=booking.uidocument_view.regulations&sort=name&phpgw_return_as=json&owner[]=building::' + building_id;
+	var oArgs = {
+		menuaction: 'booking.uidocument_view.regulations',
+		sort: 'name',
+	};
+	var url = phpGWLink('index.php', oArgs, true);
+
+	url += '&owner[]=building::' + building_id;
+
 	for (var r in resources)
 	{
 		url += '&owner[]=resource::' + resources[r];
@@ -326,7 +343,7 @@ function populateTableResources(url, container, colDefs)
 	}
 	else
 	{
-		createTable(container, url, colDefs, 'results');
+		createTable(container, url, colDefs, 'results', 'pure-table pure-table-bordered');
 	}
 }
 
@@ -338,7 +355,7 @@ function populateTableRegulations(url, container, colDefs)
 	}
 	else
 	{
-		createTable(container, url, colDefs);
+		createTable(container, url, colDefs, '', 'pure-table pure-table-bordered');
 	}
 
 }

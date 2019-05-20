@@ -27,7 +27,7 @@ $(window).on('load', function()
 
 function populateTableChkResources(building_id, selection)
 {
-	oArgs = {menuaction: 'booking.uiresource.index', sort: 'name', filter_building_id: building_id, filter_activity_id: $("#field_activity").val()};
+	oArgs = {menuaction: 'booking.uiresource.index', sort: 'name', filter_building_id: building_id, filter_activity_id: $("#field_activity").val(), length: -1};
 	var requestUrl = phpGWLink('index.php', oArgs, true);
 	var container = 'resources_container';
 	var colDefsResources = [{label: '', object: [{type: 'input', attrs: [
@@ -40,7 +40,7 @@ function populateTableChkResources(building_id, selection)
 
 function populateTableChk(url, container, colDefs)
 {
-	createTable(container, url, colDefs);
+	createTable(container, url, colDefs, '', 'pure-table pure-table-bordered');
 }
 
 $(document).ready(function ()

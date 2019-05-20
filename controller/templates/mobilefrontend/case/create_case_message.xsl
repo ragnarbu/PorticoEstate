@@ -1,5 +1,8 @@
 <!-- $Id: edit_check_list.xsl 8374 2011-12-20 07:45:04Z vator $ -->
 <xsl:template match="data" name="view_check_list" xmlns:php="http://php.net/xsl">
+	<xsl:variable name="get_image_url">
+		<xsl:value-of select="php:function('get_phpgw_link', '/index.php', 'menuaction:controller.uicase.get_image,phpgw_return_as:json')" />
+	</xsl:variable>
 
 	<div id="main_content" class="medium">
 
@@ -131,6 +134,9 @@
 					<xsl:variable name="action_url">
 						<xsl:value-of select="php:function('get_phpgw_link', '/index.php', 'menuaction:controller.uicase.send_case_message')" />
 					</xsl:variable>
+					<xsl:variable name="lang_select">
+						<xsl:value-of select="php:function('lang', 'select')" />
+					</xsl:variable>
 
 					<form ENCTYPE="multipart/form-data" id="frmRegCaseMessage" action="{$action_url}" method="post" class="pure-form pure-form-stacked">
 						<input>
@@ -158,107 +164,165 @@
 						<!-- === TITLE === -->
 
 						<label>Tittel på melding:</label>
-						<input name="message_title" type="text" class="pure-input-1-2 required" required="required"/>
+						<input name="message_title" type="text" class="pure-input-1 required" required="required"/>
 
 						<!-- === CATEGORY === -->
 						<label>Kategori:</label>
-						<select name="message_cat_id" class="pure-input-1-2 required" required="required">
+						<select name="message_cat_id" class="pure-input-1 required" required="required">
 							<option value="">Velg kategori</option>
 							<xsl:for-each select="categories/cat_list">
 								<xsl:variable name="cat_id">
 									<xsl:value-of select="./cat_id"/>
 								</xsl:variable>
 								<option value="{$cat_id}">
+									<xsl:if test="selected = 'selected'">
+										<xsl:attribute name="selected">selected</xsl:attribute>
+									</xsl:if>
 									<xsl:value-of select="./name"/>
 								</option>
 							</xsl:for-each>
 						</select>
 						<!-- === UPLOAD FILE === -->
 						<label>Filvedlegg:</label>
-						<input type="file" id="file" name="file" >
+						<input type="file" id="file" name="file" class="pure-input-1">
 							<xsl:attribute name="accept">image/*</xsl:attribute>
 							<xsl:attribute name="capture">camera</xsl:attribute>
 						</input>
 
 						<h3>Velg hvilke saker meldingen gjelder</h3>
-						<ul class="cases">
+						<li class="check_item_case">
 							<xsl:for-each select="check_items_and_cases">
 								<xsl:choose>
 									<xsl:when test="cases_array/child::node()">
-										<li class="check_item">
-											<h4>
-												<span>
-													<xsl:value-of select="control_item/control_group_name"/>
-													<xsl:text>::</xsl:text>
-													<xsl:value-of select="control_item/title"/>
+										<h4>
+											<span class="control_item_type ext_info">
+												<xsl:value-of select="control_item/control_group_name"/>
+												<xsl:text>::</xsl:text>
+												<xsl:value-of select="control_item/title"/>
 
-												</span>
-											</h4>
-											<ul>
-												<xsl:for-each select="cases_array">
-													<xsl:variable name="cases_id">
-														<xsl:value-of select="id"/>
-													</xsl:variable>
-													<xsl:variable name="condition_degree">
-														<xsl:value-of select="condition_degree"/>
-													</xsl:variable>
-													<xsl:variable name="consequence">
-														<xsl:value-of select="consequence"/>
-													</xsl:variable>
-													<li>
-														<input type="checkbox"  name="case_ids[]" value="{$cases_id}" />
-														<xsl:choose>
-															<xsl:when test="component_descr != ''">
+											</span>
+										</h4>
+										<ul>
+											<xsl:for-each select="cases_array">
+												<xsl:variable name="cases_id">
+													<xsl:value-of select="id"/>
+												</xsl:variable>
+												<xsl:variable name="condition_degree">
+													<xsl:value-of select="condition_degree"/>
+												</xsl:variable>
+												<xsl:variable name="consequence">
+													<xsl:value-of select="consequence"/>
+												</xsl:variable>
+												<li>
+													<!--  ==================== COL1: ORDERNR ===================== -->
+													<div class="col_1">
+														<span class="order_nr">
+															<xsl:number />.
+															<input type="checkbox"  name="case_ids[]" value="{$cases_id}"  />
+														</span>
+													</div>
+													<!--  ==================== COL2: CASE CONTENT ===================== -->
+													<div class="col_2">
+														<div class="case_info">
+
+															<xsl:choose>
+																<xsl:when test="component_descr != ''">
+																	<div class="row">
+																		<label>
+																			<xsl:value-of select="php:function('lang','component')" />
+																		</label>
+																	</div>
+																	<div class="component_descr">
+																		<xsl:value-of disable-output-escaping="yes" select="component_descr"/>
+																	</div>
+																</xsl:when>
+															</xsl:choose>
+															<div class="row">
+																<label>Tilstandsgrad:</label>
+																<span class="case_condition_degree">
+																	<xsl:for-each select="//degree_list/options">
+																		<xsl:if test="$condition_degree = id">
+																			<xsl:value-of disable-output-escaping="yes" select="name"/>
+																		</xsl:if>
+																	</xsl:for-each>
+																</span>
+															</div>
+															<div class="row">
+																<label>Konsekvens:</label>
+																<span class="case_consequence">
+																	<xsl:for-each select="//consequence_list/options">
+																		<xsl:if test="$consequence = id">
+																			<xsl:value-of disable-output-escaping="yes" select="name"/>
+																		</xsl:if>
+																	</xsl:for-each>
+																</span>
+															</div>
+															<div class="row">
+																<label>Beskrivelse:</label>
+															</div>
+															<div class="case_descr">
+																<xsl:value-of select="descr"/>
+															</div>
+															<xsl:if test="proposed_counter_measure !=''">
 																<div class="row">
 																	<label>
-																		<xsl:value-of select="php:function('lang','component')" />
+																		<xsl:value-of select="php:function('lang', 'proposed counter measure')"/>
+																		<xsl:text>:</xsl:text>
 																	</label>
 																</div>
-																<div class="component_descr">
-																	<xsl:value-of disable-output-escaping="yes" select="component_descr"/>
+																<div class="proposed_counter_measure">
+																	<xsl:value-of select="proposed_counter_measure"/>
 																</div>
-															</xsl:when>
-														</xsl:choose>
-														<div class="row">
-															<label>Tilstandsgrad:</label>
-															<span class="case_condition_degree">
-																<xsl:for-each select="//degree_list/options">
-																	<xsl:if test="$condition_degree = id">
-																		<xsl:value-of disable-output-escaping="yes" select="name"/>
-																	</xsl:if>
-																</xsl:for-each>
-															</span>
+
+															</xsl:if>
+
+															<xsl:if test="case_files/child::node()">
+																<div class="row">
+																	<label>
+																		<xsl:value-of select="php:function('lang', 'files')"/>
+																		<xsl:text>:</xsl:text>
+																	</label>
+																</div>
+																<!-- Slideshow container -->
+																<div class="slideshow-container">
+
+																	<xsl:variable name="file_count">
+																		<xsl:value-of select="count(case_files)" />
+																	</xsl:variable>
+
+																	<xsl:for-each select="case_files">
+
+																		<!-- Full-width images with number and caption text -->
+																		<div class="mySlides fade">
+																			<div class="numbertext">
+																				<xsl:number />	/ <xsl:value-of select="$file_count"/>
+																			</div>
+																			<img src="{$get_image_url}&amp;file_id={file_id}" style="width:100%"/>
+																			<div class="text">
+																				<xsl:value-of select="name"/>
+																			</div>
+																		</div>
+
+																	</xsl:for-each>
+																</div>
+																<br/>
+															</xsl:if>
 														</div>
-														<div class="row">
-															<label>Konsekvens:</label>
-															<span class="case_consequence">
-																<xsl:for-each select="//consequence_list/options">
-																	<xsl:if test="$consequence = id">
-																		<xsl:value-of disable-output-escaping="yes" select="name"/>
-																	</xsl:if>
-																</xsl:for-each>
-															</span>
-														</div>
-														<div class="row">
-															<label>Beskrivelse:</label>
-														</div>
-														<div class="case_descr">
-															<xsl:value-of select="descr"/>
-														</div>
-													</li>
-												</xsl:for-each>
-											</ul>
-										</li>
+													</div>
+												</li>
+											</xsl:for-each>
+
+										</ul>
 									</xsl:when>
 								</xsl:choose>
 							</xsl:for-each>
-						</ul>
+						</li>
 
 						<div class="form-buttons">
 							<xsl:variable name="lang_save">
 								<xsl:value-of select="php:function('lang', 'save')" />
 							</xsl:variable>
-							<input class="pure-button pure-button-primary" type="submit" name="save_control" value="Send melding" title="{$lang_save}" />
+							<input class="pure-button pure-button-primary bigmenubutton" type="submit" name="save_control" value="Send melding" title="{$lang_save}" />
 						</div>
 					</form>
 				</xsl:when>

@@ -133,6 +133,15 @@
 			{
 				foreach ($orgs as $org)
 				{
+					$this->db->query("SELECT organization_number"
+						. " FROM bb_organization"
+						. " WHERE active = 1 AND organization_number = '{$org['orgnr']}'", __LINE__, __FILE__);
+
+					if (!$this->db->next_record())
+					{
+						continue;
+					}
+
 					$results[] = array
 					(
 						'orgnr' => $org['orgnr']
@@ -166,13 +175,16 @@
 
 			}
 
-			$test_organization = $this->config->config_data['test_organization'];
-			if ($this->debug && $test_organization)
+			$test_organizations = (array)explode(',', $this->config->config_data['test_organization']);
+			if ($this->debug && $test_organizations)
 			{
-				$results[] = array
-				(
-					'orgnr' => $test_organization
-				);
+				foreach ($test_organizations as $test_organization)
+				{
+					$results[] = array
+					(
+						'orgnr' => $test_organization
+					);					
+				}
 			}
 
 			return $results;

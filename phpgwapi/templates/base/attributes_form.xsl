@@ -61,6 +61,7 @@
 	<xsl:param name="statustext" />
 	<xsl:param name="textareacols" />
 	<xsl:param name="textarearows" />
+	<xsl:param name="class" />
 
 	<xsl:choose>
 		<xsl:when test="datatype='section'">
@@ -120,9 +121,14 @@
 				<input type="hidden" name="values_attribute[{id}][disabled]" value="{disabled}"/>
 				<xsl:choose>
 					<xsl:when test="datatype='R'">
-						<xsl:call-template name="choice">
-							<xsl:with-param name="input_type">radio</xsl:with-param>
-						</xsl:call-template>
+						<div id="id_{name}">
+							<xsl:attribute name="class">
+								<xsl:text>pure-custom</xsl:text>
+							</xsl:attribute>
+							<xsl:call-template name="choice">
+								<xsl:with-param name="input_type">radio</xsl:with-param>
+							</xsl:call-template>
+						</div>
 					</xsl:when>
 					<xsl:when test="datatype='CH'">
 						<xsl:call-template name="choice">
@@ -130,7 +136,19 @@
 						</xsl:call-template>
 					</xsl:when>
 					<xsl:when test="datatype='LB'">
-						<select id="id_{name}" name="values_attribute[{id}][value]" title="{$statustext}" class="pure-input-1-2" >
+						<select id="id_{name}" name="values_attribute[{id}][value]" title="{$statustext}" >
+							<xsl:choose>
+								<xsl:when test="$class != ''">
+									<xsl:attribute name="class">
+										<xsl:value-of select="$class"/>
+									</xsl:attribute>
+								</xsl:when>
+								<xsl:otherwise>
+									<xsl:attribute name="class">
+										<xsl:text>pure-input-1-2</xsl:text>
+									</xsl:attribute>
+								</xsl:otherwise>
+							</xsl:choose>
 							<xsl:choose>
 								<xsl:when test="disabled!=''">
 									<xsl:attribute name="disabled">
@@ -284,7 +302,19 @@
 								</xsl:when>
 							</xsl:choose>
 						</input>
-						<input size="30" type="text" id="{$vendor_name}" name="{$vendor_name}" value="{vendor_name}" onClick="{$lookup_function}" readonly="readonly" class="pure-input-1-2" >
+						<input size="30" type="text" id="{$vendor_name}" name="{$vendor_name}" value="{vendor_name}" onClick="{$lookup_function}" readonly="readonly">
+							<xsl:choose>
+								<xsl:when test="$class != ''">
+									<xsl:attribute name="class">
+										<xsl:value-of select="$class"/>
+									</xsl:attribute>
+								</xsl:when>
+								<xsl:otherwise>
+									<xsl:attribute name="class">
+										<xsl:text>pure-input-1-2</xsl:text>
+									</xsl:attribute>
+								</xsl:otherwise>
+							</xsl:choose>
 							<xsl:choose>
 								<xsl:when test="disabled!=''">
 									<xsl:attribute name="disabled">
@@ -295,7 +325,20 @@
 						</input>
 					</xsl:when>
 					<xsl:when test="datatype='custom1'">
-						<select name="values_attribute[{id}][value]" class="pure-input-1-2" >
+						<select name="values_attribute[{id}][value]" >
+							<xsl:choose>
+								<xsl:when test="$class != ''">
+									<xsl:attribute name="class">
+										<xsl:value-of select="$class"/>
+									</xsl:attribute>
+								</xsl:when>
+								<xsl:otherwise>
+									<xsl:attribute name="class">
+										<xsl:text>pure-input-1-2</xsl:text>
+									</xsl:attribute>
+								</xsl:otherwise>
+							</xsl:choose>
+
 							<xsl:choose>
 								<xsl:when test="disabled!=''">
 									<xsl:attribute name="disabled">
@@ -354,7 +397,20 @@
 								</xsl:when>
 							</xsl:choose>
 						</input>
-						<input size="30" type="text" name="{$custom_name}" value="{custom_name}" onClick="{$lookup_function}" readonly="readonly" class="pure-input-1-2" >
+						<input size="30" type="text" name="{$custom_name}" value="{custom_name}" onClick="{$lookup_function}" readonly="readonly" >
+							<xsl:choose>
+								<xsl:when test="$class != ''">
+									<xsl:attribute name="class">
+										<xsl:value-of select="$class"/>
+									</xsl:attribute>
+								</xsl:when>
+								<xsl:otherwise>
+									<xsl:attribute name="class">
+										<xsl:text>pure-input-1-2</xsl:text>
+									</xsl:attribute>
+								</xsl:otherwise>
+							</xsl:choose>
+
 							<xsl:choose>
 								<xsl:when test="disabled!=''">
 									<xsl:attribute name="disabled">
@@ -389,7 +445,20 @@
 								</xsl:when>
 							</xsl:choose>
 						</input>
-						<input id="{$custom_name}" name="{$custom_name}" type="text" value="{custom_name}" class="pure-input-1-2" >
+						<input id="{$custom_name}" name="{$custom_name}" type="text" value="{custom_name}" >
+							<xsl:choose>
+								<xsl:when test="$class != ''">
+									<xsl:attribute name="class">
+										<xsl:value-of select="$class"/>
+									</xsl:attribute>
+								</xsl:when>
+								<xsl:otherwise>
+									<xsl:attribute name="class">
+										<xsl:text>pure-input-1-2</xsl:text>
+									</xsl:attribute>
+								</xsl:otherwise>
+							</xsl:choose>
+
 							<xsl:choose>
 								<xsl:when test="disabled!=''">
 									<xsl:attribute name="disabled">
@@ -432,7 +501,20 @@
 								</xsl:when>
 							</xsl:choose>
 						</input>
-						<input size="30" type="text" id="{$user_name}" name="{$user_name}" value="{user_name}" onClick="{$lookup_function}" readonly="readonly" class="pure-input-1-2" >
+						<input size="30" type="text" id="{$user_name}" name="{$user_name}" value="{user_name}" onClick="{$lookup_function}" readonly="readonly">
+							<xsl:choose>
+								<xsl:when test="$class != ''">
+									<xsl:attribute name="class">
+										<xsl:value-of select="$class"/>
+									</xsl:attribute>
+								</xsl:when>
+								<xsl:otherwise>
+									<xsl:attribute name="class">
+										<xsl:text>pure-input-1-2</xsl:text>
+									</xsl:attribute>
+								</xsl:otherwise>
+							</xsl:choose>
+
 							<xsl:choose>
 								<xsl:when test="disabled!=''">
 									<xsl:attribute name="disabled">
@@ -443,7 +525,7 @@
 						</input>
 					</xsl:when>
 					<xsl:when test="datatype='D'">
-						<input data-validation="date" data-validation-format="dd/mm/yyyy" type="text" id="values_attribute_{id}" name="values_attribute[{id}][value]" value="{value}" size="12" maxlength="12">
+						<input type="text" id="values_attribute_{id}" name="values_attribute[{id}][value]" value="{value}" size="12" maxlength="12">
 							<xsl:attribute name="readonly">
 								<xsl:text> readonly</xsl:text>
 							</xsl:attribute>
@@ -453,9 +535,9 @@
 										<xsl:text> disabled</xsl:text>
 									</xsl:attribute>
 								</xsl:when>
-								<xsl:when test="nullable='1'">
-									<xsl:attribute name="data-validation-optional">
-										<xsl:text>true</xsl:text>
+								<xsl:when test="nullable!='1'">
+									<xsl:attribute name="data-validation">
+										<xsl:text>required</xsl:text>
 									</xsl:attribute>
 								</xsl:when>
 							</xsl:choose>
@@ -529,7 +611,20 @@
 						</table>
 					</xsl:when>
 					<xsl:when test="datatype='T'">
-						<textarea id="id_{name}"  name="values_attribute[{id}][value]" class="pure-input-1-2" >
+						<textarea id="id_{name}"  name="values_attribute[{id}][value]">
+							<xsl:choose>
+								<xsl:when test="$class != ''">
+									<xsl:attribute name="class">
+										<xsl:value-of select="$class"/>
+									</xsl:attribute>
+								</xsl:when>
+								<xsl:otherwise>
+									<xsl:attribute name="class">
+										<xsl:text>pure-input-1-2</xsl:text>
+									</xsl:attribute>
+								</xsl:otherwise>
+							</xsl:choose>
+
 							<xsl:choose>
 								<xsl:when test="disabled!=''">
 									<xsl:attribute name="disabled">
@@ -773,18 +868,18 @@
 	</xsl:variable>
 	<div class="pure-custom">
 		<xsl:for-each select="choice">
-				<input id="id_{$name}_{id}" type="{$input_type}" name="values_attribute[{$attrib_id}][value][]" value="{id}">
-					<xsl:if test="selected='1'">
-						<xsl:attribute name="checked">
-							<xsl:text>checked</xsl:text>
-						</xsl:attribute>
-					</xsl:if>
-					<xsl:if test="//nullable!='1' and $input_type = 'radio'">
-						<xsl:attribute name="required">
-							<xsl:text>required</xsl:text>
-						</xsl:attribute>
-					</xsl:if>
-				</input>
+			<input id="id_{$name}_{id}" type="{$input_type}" name="values_attribute[{$attrib_id}][value][]" value="{id}">
+				<xsl:if test="selected='1'">
+					<xsl:attribute name="checked">
+						<xsl:text>checked</xsl:text>
+					</xsl:attribute>
+				</xsl:if>
+				<xsl:if test="//nullable!='1' and $input_type = 'radio'">
+					<xsl:attribute name="required">
+						<xsl:text>required</xsl:text>
+					</xsl:attribute>
+				</xsl:if>
+			</input>
 			<xsl:value-of select="value"/>
 			<br></br>
 		</xsl:for-each>
