@@ -214,6 +214,10 @@
 //					'sortable'	=> true
 			);
 
+			$columns['modified_time'] = array(
+				'id' => 'modified_time',
+				'name' => lang('modified time'),
+			);
 			$columns['status'] = array(
 				'id' => 'status',
 				'name' => lang('status')
@@ -567,6 +571,7 @@
 				}
 
 				$ticket['entry_date'] = $GLOBALS['phpgw']->common->show_date($ticket['entry_date'], $this->dateformat);
+				$ticket['modified_time'] = $GLOBALS['phpgw']->common->show_date($ticket['modified_date'], 'H:i:s');
 				$ticket['modified_date'] = $GLOBALS['phpgw']->common->show_date($ticket['modified_date'], $this->dateformat);
 				if ($ticket['finnish_date2'])
 				{
@@ -1120,17 +1125,20 @@
 					{
 						$i++;
 						$j = 1;
+						$additional_notes[] = $note;
 					}
-					else
+					else//verify this...
 					{
 						if($i)
 						{
 							$j++;
 						}
+						$note['value_count'] = "{$i}.{$j}";
+						$note['value_note'] = "";
+						$note['value_user'] = "";
+						$additional_notes[] = $note;
 					}
 					$i = max(array(1, $i));
-					$note['value_count'] = "{$i}.{$j}";
-					$additional_notes[] = $note;
 				}
 			}
 

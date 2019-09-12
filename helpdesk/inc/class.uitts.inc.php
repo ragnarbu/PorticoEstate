@@ -628,9 +628,22 @@ HTML;
 			$new_status = phpgw::get_var('new_status', 'string', 'GET');
 			$id 		= phpgw::get_var('id', 'int');
 			$receipt 	= $this->bo->update_status(array('status'=>$new_status),$id);
-			if (isset($this->bo->config->config_data['mailnotification']) && $this->bo->config->config_data['mailnotification'])
+
+			$custom_status = $this->bo->get_custom_status();
+
+			$_closed = $new_status == 'X' ? true : false;
+			foreach ($custom_status as $entry)
 			{
-				$receipt = $this->bo->mail_ticket($id, $this->bo->fields_updated, $receipt);
+				if("C{$entry['id']}" == $new_status && $entry['closed'] == 1)
+				{
+					$_closed = true;
+					break;
+				}
+			}
+
+			if ($_closed || (isset($this->bo->config->config_data['mailnotification']) && $this->bo->config->config_data['mailnotification']))
+			{
+				$receipt = $this->bo->mail_ticket($id, $this->bo->fields_updated, $receipt, false, true);
 			}
 			//	$GLOBALS['phpgw']->session->appsession('receipt','helpdesk',$receipt);
 			return "id ".$id." ".lang('Status has been changed');
@@ -2037,10 +2050,14 @@ JS;
 			$z = 0;
 			foreach ($values['files'] as $_entry)
 			{
+				$datetime = new DateTime($_entry['created'], new DateTimeZone('UTC'));
+				$datetime->setTimeZone(new DateTimeZone($GLOBALS['phpgw_info']['user']['preferences']['common']['timezone']));
+				$created = $datetime->format('Y-m-d H:i:s');
 				$content_files[] = array(
 					'file_name' => '<a href="' . $link_view_file . '&amp;file_id=' . $_entry['file_id'] . '" target="_blank" title="' . lang('click to view file') . '">' . $_entry['name'] . '</a>',
 					'delete_file' => '<input type="checkbox" name="values[file_action][]" value="' . $_entry['file_id'] . '" title="' . lang('Check to delete file') . '">',
-					'attach_file' => '<input type="checkbox" name="values[file_attach][]" value="' . $_entry['file_id'] . '" title="' . lang('Check to attach file') . '">'
+					'attach_file' => '<input type="checkbox" name="values[file_attach][]" value="' . $_entry['file_id'] . '" title="' . lang('Check to attach file') . '">',
+					'created'	=> $created,
 				);
 				if ( in_array($_entry['mime_type'], $img_types))
 				{
@@ -2117,6 +2134,13 @@ JS;
 				{
 					$this->parent_cat_id = $change_category[0];
 					$values['cat_id'] = (int)$change_category[1];
+					$group_assignment = createObject('helpdesk.socat_assignment')->read_single($values['cat_id']);
+
+					if($group_assignment)
+					{
+						$values['group_id'] = $group_assignment;
+						$values['assignedto'] = '';
+					}
 				}
 
 				$location_id = $GLOBALS['phpgw']->locations->get_id('helpdesk', '.ticket');
@@ -2131,6 +2155,8 @@ JS;
 						$additional_users[] = $entry['account_id'];
 					}
 				}
+
+				unset($entry);
 
 				if(in_array($this->account, $additional_users));
 				{
@@ -2274,9 +2300,31 @@ JS;
 					}
 				}
 
-				self::redirect(array('menuaction' => 'helpdesk.uitts.view','id' => $id,
-					'parent_cat_id' => $this->parent_cat_id ));
 
+				$custom_status = $this->bo->get_custom_status();
+
+				$_closed = $values['status'] == 'X' ? true : false;
+				foreach ($custom_status as $entry)
+				{
+					if("C{$entry['id']}" == $values['status'] && $entry['closed'] == 1)
+					{
+						$_closed = true;
+						break;
+					}
+				}
+
+				unset($entry);
+
+				if($_closed)
+				{
+					self::redirect(array('menuaction' => 'helpdesk.uitts.index',
+						'parent_cat_id' => $this->parent_cat_id ));
+				}
+				else
+				{
+					self::redirect(array('menuaction' => 'helpdesk.uitts.view','id' => $id,
+						'parent_cat_id' => $this->parent_cat_id ));
+				}
 			}
 
 			/* Preserve attribute values from post */
@@ -2426,8 +2474,14 @@ JS;
 
 			foreach ($additional_notes as &$note)
 			{
-				$note['value_note'] = preg_replace("/[[:alpha:]]+:\/\/[^<>[:space:]]+[[:alnum:]\/]/","<a href=\"\\0\">\\0</a>", $note['value_note']);
-				$note['value_note'] = nl2br($note['value_note']);
+				/**
+				 * html
+				 */
+				if(!preg_match("/(<\/p>|<\/span>|<\/table>)/i", $note['value_note']))
+				{
+					$note['value_note'] = preg_replace("/[[:alpha:]]+:\/\/[^<>[:space:]]+[[:alnum:]\/]/","<a href=\"\\0\">\\0</a>", $note['value_note']);
+					$note['value_note'] = nl2br($note['value_note']);
+				}
 			}
 
 			$datatable_def = array();
@@ -2485,11 +2539,18 @@ JS;
 			$z = 0;
 			foreach ($ticket['files'] as $_entry)
 			{
+				$datetime = new DateTime($_entry['created'], new DateTimeZone('UTC'));
+				$datetime->setTimeZone(new DateTimeZone($GLOBALS['phpgw_info']['user']['preferences']['common']['timezone']));
+				$created = $datetime->format('Y-m-d H:i:s');
+
 				$content_files[] = array(
 					'file_name' => '<a href="' . $link_view_file . '&amp;file_id=' . $_entry['file_id'] . '" target="_blank" title="' . lang('click to view file') . '">' . $_entry['name'] . '</a>',
 					'delete_file' => '<input type="checkbox" name="values[file_action][]" value="' . $_entry['file_id'] . '" title="' . lang('Check to delete file') . '">',
-					'attach_file' => '<input type="checkbox" name="values[file_attach][]" value="' . $_entry['file_id'] . '" title="' . lang('Check to attach file') . '">'
+					'attach_file' => '<input type="checkbox" name="values[file_attach][]" value="' . $_entry['file_id'] . '" title="' . lang('Check to attach file') . '">',
+					'created'	=> $created
 				);
+
+
 				if ( in_array($_entry['mime_type'], $img_types))
 				{
 					$content_files[$z]['file_name'] = $_entry['name'];
@@ -2505,6 +2566,8 @@ JS;
 			}
 
 			$attach_file_def = array(
+				array('key' => 'created', 'label' => lang('date'), 'sortable' => true,
+					'resizeable' => true),
 				array('key' => 'file_name', 'label' => lang('Filename'), 'sortable' => false,
 					'resizeable' => true),
 				array('key' => 'picture', 'label' => lang('picture'), 'sortable' => false,
