@@ -29,6 +29,8 @@
 				'contact_phone' => array('type' => 'string'),
 				'completed' => array('type' => 'int', 'required' => true, 'nullable' => false,
 					'default' => '0'),
+				'access_requested' => array('type' => 'int', 'required' => true, 'nullable' => false,
+					'default' => '0'),
 				'reminder' => array('type' => 'int', 'required' => true, 'nullable' => false,
 					'default' => '1'),
 				'is_public' => array('type' => 'int', 'required' => true, 'nullable' => false,
@@ -314,6 +316,57 @@
 			$db = $this->db;
 			$ids = join(', ', array_map(array($this, 'select_id'), $events));
 			$sql = "UPDATE $table_name SET completed = 1 WHERE {$table_name}.id IN ($ids);";
+			$db->query($sql, __LINE__, __FILE__);
+		}
+
+		public function find_request_access()
+		{
+			$table_name = $this->table_name;
+			$db = $this->db;
+			$request_access_conditions = $this->find_request_access_sql_conditions();
+			return $this->read(array('filters' => array('where' => $request_access_conditions), 'results' => 1000));
+		}
+
+		protected function find_request_access_sql_conditions()
+		{
+			$table_name = $this->table_name;
+			$slightly_before	 = '2019-05-31 14:55:00';date('Y-m-d H:i:s', (time() - 60 * 5) );
+			$slightly_after		 = '2019-05-31 15:00:00';date('Y-m-d H:i:s', (time() + 60 * 5) );
+			$now				 = '2019-05-31 15:00:00';date('Y-m-d H:i:s');
+
+			$_conditions = "("
+				. " e_lock_resource_id IS NOT NULL"
+	//			. " AND contact_phone IS NOT NULL AND contact_phone !=''"
+				. " AND {$table_name}.active != 0"
+				. " AND {$table_name}.access_requested = 0"
+				. " AND {$table_name}.from_ > '{$slightly_before}'"
+				. " AND '{$slightly_after}' >= {$table_name}.from_"
+				. " AND '{$now}' <= {$table_name}.to_"
+				. " )";
+
+			$sql = "SELECT bb_event.id FROM bb_event"
+				. " JOIN bb_event_resource ON bb_event.id = bb_event_resource.event_id"
+				. " JOIN bb_resource ON bb_resource.id = bb_event_resource.resource_id"
+				. " WHERE $_conditions";
+
+			$this->db->query($sql, __LINE__, __FILE__);
+			$ids = array(-1);
+			while ($this->db->next_record())
+			{
+				$ids[] = $this->db->f('id');
+			}
+
+			$conditions = "({$table_name}.id IN (" . implode(', ', $ids) . "))";
+
+			return $conditions;
+		}
+
+		public function complete_request_access( &$events )
+		{
+			$table_name = $this->table_name;
+			$db = $this->db;
+			$ids = join(', ', array_map(array($this, 'select_id'), $events));
+			$sql = "UPDATE $table_name SET access_requested = 1 WHERE {$table_name}.id IN ($ids);";
 			$db->query($sql, __LINE__, __FILE__);
 		}
 
