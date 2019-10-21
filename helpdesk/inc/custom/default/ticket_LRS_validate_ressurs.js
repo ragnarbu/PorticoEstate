@@ -15,6 +15,49 @@ $(document).ready(function ()
 		case 255:  //LRS Lønn
 		case 256:  //LRS Refusjon
 			$("#arbeidssted_name").attr("data-validation", "required");
+
+			/**
+			 * Override
+			 */
+			JqueryPortico.autocompleteHelper(phpGWLink('index.php',
+			{
+				menuaction: 'helpdesk.uitts.get_on_behalf_of',
+				custom_method: true,
+				method: 'get_on_behalf_of',
+				acl_location: '.ticket',
+				search_options: 'ressurs_nr'
+			}, true),
+				'set_user_alternative_name', 'set_user_alternative_lid', 'set_user_alternative_container');
+
+			/**
+			 * sentrale saksbehandlere må slå opp på ressursnr
+			 */
+			if(simple != 1 && !$("#id").val())
+			{
+				JqueryPortico.autocompleteHelper(phpGWLink('index.php',
+				{
+					menuaction: 'helpdesk.uitts.get_on_behalf_of',
+					custom_method: true,
+					method: 'get_on_behalf_of',
+					acl_location: '.ticket',
+					search_options: 'ressurs_nr'
+				}, true),
+					'set_notify_name', 'set_notify_lid', 'set_notify_container');
+			}
+			//on "view"
+			else if ($("#id").val())
+			{
+				JqueryPortico.autocompleteHelper(phpGWLink('index.php',
+				{
+					menuaction: 'helpdesk.uitts.get_on_behalf_of',
+					custom_method: true,
+					method: 'get_on_behalf_of',
+					acl_location: '.ticket',
+					search_options: 'resultat_enhet',
+					ticket_id:$("#id").val()
+				}, true),
+					'set_notify_name', 'set_notify_lid', 'set_notify_container');
+			}
 			// Leave as is...
 			break;
 		default:
@@ -37,7 +80,7 @@ $(document).ready(function ()
 		get_ressursname();
 	});
 
-	if(typeof(account_lid) !== 'undefined' && !$("#arbeidssted_id").val())
+	if (typeof (account_lid) !== 'undefined' && !$("#arbeidssted_id").val())
 	{
 		get_user_info(account_lid);
 	}
@@ -199,7 +242,7 @@ function get_user_info(account_lid)
 		url: requestUrl,
 		success: function (data)
 		{
-			$("#arbeidssted_id").val();
+			$("#arbeidssted_id").val('');
 			$("#arbeidssted_name").val('');
 
 			if (data != null)
@@ -208,6 +251,28 @@ function get_user_info(account_lid)
 				$("#arbeidssted_name").val(data.org_unit);
 				$('form').isValid(validateLanguage, conf_on_changed, true);
 			}
+		}
+	});
+}
+
+function set_notify(account_lid)
+{
+	var oArgs = {
+		menuaction: 'helpdesk.uitts.custom_ajax',
+		method: 'set_notify',
+		acl_location: '.ticket',
+		account_lid: account_lid,
+		ticket_id:$("#id").val()
+	};
+	var requestUrl = phpGWLink('index.php', oArgs, true);
+
+	$.ajax({
+		type: 'POST',
+		dataType: 'json',
+		url: requestUrl,
+		success: function (data)
+		{
+
 		}
 	});
 }

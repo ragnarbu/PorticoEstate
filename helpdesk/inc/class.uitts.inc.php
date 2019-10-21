@@ -118,6 +118,15 @@
 			$this->location_code		= $this->bo->location_code;
 			$this->p_num				= $this->bo->p_num;
 
+			if($this->cat_id)
+			{
+				$cat_path = $this->cats->get_path($this->cat_id);
+				if(count($cat_path) > 1)
+				{
+					$this->parent_cat_id = $cat_path[0]['id'];
+				}
+			}
+
 			if($this->parent_cat_id)
 			{
 				$GLOBALS['phpgw_info']['flags']['menu_selection'] = "helpdesk::helpdesk_$this->parent_cat_id";
@@ -145,7 +154,8 @@
 				if(!empty($parent_category[0]['name']))
 				{
 					$this->parent_category_name = $parent_category[0]['name'];
-					$this->lang_app_name .= ": {$this->parent_category_name}";
+//					$this->lang_app_name .= ": {$this->parent_category_name}";
+					$this->lang_app_name = $this->parent_category_name;
 
 				}
 			}
@@ -245,7 +255,7 @@
 				'branch_id' => phpgw::get_var('branch_id'),
 				'order_dim1' => phpgw::get_var('order_dim1'),
 				'check_date_type' => phpgw::get_var('check_date_type', 'int'),
-				'parent_cat_id'	=> $this->parent_cat_id
+				'parent_cat_id'	=> $this->_simple ? null : $this->parent_cat_id
 			);
 
 			return $params;
@@ -950,7 +960,7 @@ HTML;
 
 			if(!$this->_simple)
 			{
-				if($this->parent_cat_id)
+				if((int)$this->parent_cat_id > 0)
 				{
 					$_cats = $this->cats->return_sorted_array(0, false, '', '', '', false, $this->parent_cat_id);
 					$_categories = array();
@@ -1149,7 +1159,7 @@ HTML;
 
 			}
 
-			if($subs && (int)$this->parent_cat_id <= 0)
+			if($subs && ((int)$this->parent_cat_id == -1 || !$this->parent_cat_id))
 			{
 				$GLOBALS['phpgw_info']['flags']['app_header'] = $this->lang_app_name . ': ' . lang('choose a section from the menu');
 				$sub_menu = array();
@@ -1484,7 +1494,8 @@ JS;
 				$data['datatable']['group_buttons'] = false;
 			}
 
-			$GLOBALS['phpgw_info']['flags']['app_header'] = $this->parent_category_name ? $this->parent_category_name : $this->lang_app_name;
+//			$GLOBALS['phpgw_info']['flags']['app_header'] = $this->parent_category_name ? $this->parent_category_name : $this->lang_app_name;
+			$GLOBALS['phpgw_info']['flags']['app_header'] =  $this->lang_app_name;
 			$GLOBALS['phpgw_info']['flags']['app_header'] .= ": {$function_msg}";
 
 			self::render_template_xsl('datatable_jquery', $data);
@@ -1811,13 +1822,16 @@ JS;
 				$values['group_id'] = (isset($GLOBALS['phpgw_info']['user']['preferences']['helpdesk']['groupdefault']) ? $GLOBALS['phpgw_info']['user']['preferences']['helpdesk']['groupdefault'] : '');
 			}
 
-			if (!isset($values['cat_id']))
+			if(!$this->cat_id)
 			{
-				$this->cat_id = (isset($GLOBALS['phpgw_info']['user']['preferences']['helpdesk']['tts_category']) ? $GLOBALS['phpgw_info']['user']['preferences']['helpdesk']['tts_category'] : '');
-			}
-			else
-			{
-				$this->cat_id = $values['cat_id'];
+				if (!isset($values['cat_id']))
+				{
+					$this->cat_id = (isset($GLOBALS['phpgw_info']['user']['preferences']['helpdesk']['tts_category']) ? $GLOBALS['phpgw_info']['user']['preferences']['helpdesk']['tts_category'] : '');
+				}
+				else
+				{
+					$this->cat_id = $values['cat_id'];
+				}
 			}
 
 			$msgbox_data = (isset($receipt) ? $this->bocommon->msgbox_data($receipt) : '');
@@ -1837,13 +1851,14 @@ JS;
 
 			$tabs = array();
 			$tabs['add'] = array('label' => lang('Add'), 'link' => '#add');
+			$tabs['notify'] = array('label' => lang('Notify'), 'link' => '#notify');
 			$active_tab = 'add';
 
 			$cat_select = $this->cats->formatted_xslt_list(array('select_name' => 'values[cat_id]',
 					'selected' => $this->cat_id, 'use_acl' => $this->_category_acl, 'required' => true,'class'=>'pure-input-1-2'));
 
 			/**overide*/
-			if($this->parent_cat_id)
+			if((int)$this->parent_cat_id > 0)
 			{
 				$cat_select['cat_list'] = array();
 
@@ -1933,8 +1948,14 @@ JS;
 				'account_lid'	=> $GLOBALS['phpgw_info']['user']['account_lid']
 			);
 
-			//_debug_array($data);
-			$function_msg = lang('add ticket');
+			$parent_category =  CreateObject('phpgwapi.categories', -1, 'helpdesk', '.ticket')->return_single($this->parent_cat_id);
+
+			$function_msg = '';
+			if(!empty($parent_category[0]['name']))
+			{
+				$function_msg = "{$parent_category[0]['name']}::";
+			}
+			$function_msg .= lang('add ticket');
 
 			self::add_javascript('helpdesk', 'portico', 'tts.add.js');
 			phpgwapi_jquery::formvalidator_generate(array('date', 'security','file'));
@@ -2335,7 +2356,7 @@ JS;
 
 			$ticket = $this->bo->read_single($id, $values);
 
-			if($ticket && !$this->parent_cat_id)
+			if($ticket)
 			{
 				$cat_path = $this->cats->get_path($ticket['cat_id']);
 
@@ -2674,7 +2695,7 @@ JS;
 				'selected' => $this->cat_id, 'use_acl' => $this->_category_acl, 'required' => true,'class'=>'pure-input-1-2'));
 
 			/**overide*/
-			if($this->parent_cat_id)
+			if((int)$this->parent_cat_id > 0)
 			{
 				$cat_select['cat_list'] = array();
 
@@ -2903,7 +2924,15 @@ JS;
 			//-----------------------datatable settings---
 			//_debug_array($data);die();
 
-			$function_msg = lang('view ticket detail');
+			$parent_category =  CreateObject('phpgwapi.categories', -1, 'helpdesk', '.ticket')->return_single($this->parent_cat_id);
+
+			$function_msg = '';
+			if(!empty($parent_category[0]['name']))
+			{
+				$function_msg = "{$parent_category[0]['name']}::";
+			}
+
+			$function_msg .= lang('view ticket detail');
 			$GLOBALS['phpgw_info']['flags']['app_header'] = $function_msg . "#{$id}";
 			$GLOBALS['phpgw']->xslttpl->set_var('phpgw', array('view' => $data));
 		}
@@ -2997,6 +3026,8 @@ JS;
 						case 'get_reverse_assignee':
 							return $this->get_reverse_assignee('id');
 							break;
+						case 'set_notify':
+							break;
 						default:
 							break;
 					}
@@ -3081,7 +3112,7 @@ JS;
 
 				if ($entry['active'] && $entry['client_side'] && is_file($file))
 				{
-					$GLOBALS['phpgw']->js->add_external_file("/helpdesk/inc/custom/{$GLOBALS['phpgw_info']['user']['domain']}/{$entry['file_name']}");
+					$GLOBALS['phpgw']->js->add_external_file("/helpdesk/inc/custom/{$GLOBALS['phpgw_info']['user']['domain']}/{$entry['file_name']}", true);
 					$js_found = true;
 				}
 			}
