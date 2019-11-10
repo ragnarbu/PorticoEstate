@@ -90,12 +90,12 @@
 			}
 			else
 			{
-				$min_date = "'{$config['min_date']}'";
+				$min_date = "'" . date('Y/m/d', $config['min_date']) . "'";
 			}
 
 			if(!empty($config['max_date']))
 			{
-				$min_date .= ",maxDate:'{$config['max_date']}'";
+				$min_date .= ",maxDate:'" . date('Y/m/d', $config['max_date']) . "'";
 			}
 
 			$value = 'false';
@@ -107,7 +107,8 @@
 			{
 				if($datepicker)
 				{
-					$start_value = "new Date('{$start_value}')";
+//					$start_value = "new Date('{$start_value}')";
+					$start_value = "'{$start_value}'";
 				}
 				else if($timepicker)
 				{

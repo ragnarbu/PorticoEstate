@@ -586,6 +586,7 @@
 			$orgnr = phpgwapi_cache::session_get($this->module, self::ORGNR_SESSION_KEY);
 
 			$building_id = phpgw::get_var('building_id', 'int');
+			$simple = phpgw::get_var('simple', 'bool');
 
 			$errors = array();
 
@@ -661,7 +662,9 @@
 						$session_id_ok = false;
 					}
 					// Application contains only event details. Use dummy values for contact fields
-					$dummyfields_string = array('contact_name','contact_phone','responsible_city','responsible_street', 'name', 'organizer', 'homepage', 'description', 'equipment');
+					$dummyfields_string = array('contact_name','contact_phone','responsible_city',
+						'responsible_street', 'name', 'organizer', 'homepage', 'description', 'equipment'
+						);
 					foreach ($dummyfields_string as $field)
 					{
 						$application[$field] = 'dummy';
@@ -773,7 +776,7 @@
 							'</button>'
 						);
 						// Redirect to same URL so as to present a new, empty form
-						$this->redirect(array('menuaction' => $this->url_prefix . '.add', 'building_id' => $building_id));
+						$this->redirect(array('menuaction' => $this->url_prefix . '.add', 'building_id' => $building_id, 'simple' => $simple));
 					}
 					else
 					{
@@ -936,12 +939,39 @@
 //			}
 
 
-			$simple = false;
+			if(!$simple)
+			{
+				$simple = phpgw::get_var('formstage') == 'partial2' ? true : false;
+			}
 
 			if($GLOBALS['phpgw_info']['flags']['currentapp'] == 'bookingfrontend' && $simple)
 			{
 				$template = 'application_new_simple';
-				$GLOBALS['phpgw']->jqcal2->add_listener('start_date', 'date', !empty($default_dates) ? strtotime($default_dates[0]['from_']) :0, array('min_date' => time()));
+
+				/**
+				 * possible initial value from calendar
+				 * millisec
+				 */
+				$start = phpgw::get_var('start', 'int');
+
+				if($start)
+				{
+					$default_start_date = $start/1000;//seconds
+				}
+				elseif (!empty($default_dates))
+				{
+					$default_start_date = $default_dates[0]['from_'];
+				}
+				else
+				{
+					$default_start_date = 0;
+
+				}
+
+				$GLOBALS['phpgw']->jqcal2->add_listener('start_date', 'date', $default_start_date, array(
+					'min_date' => time(),
+					'max_date' => strtotime( date('Y-m-') . date('t') . " +1 month" ),
+					));
 				self::add_javascript('bookingfrontend', 'base', 'application_new_simple.js', 'text/javascript', true);
 			}
 			else
