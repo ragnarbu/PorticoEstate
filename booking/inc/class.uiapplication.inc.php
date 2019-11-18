@@ -945,6 +945,7 @@
 
 			$resource_id = phpgw::get_var('resource_id', 'int');
 			$resources = array();
+			$direct_booking = false;
 
 			if(!empty($_resources['results']))
 			{
@@ -954,6 +955,7 @@
 					if (!empty($_resource['direct_booking']) && $_resource['direct_booking'] < time())
 					{
 						$_resource['name'] .= ' *';
+						$direct_booking = true;
 					}
 
 					$resources[] = array(
@@ -1002,10 +1004,19 @@
 					$default_start_date = 0;
 
 				}
+				
+				$_months_ahead = 2;
+				$_date_ahead_ts = strtotime(date('Y-m-d') . " +{$_months_ahead} month");
+				$_last_day_in_month = date('t', $_date_ahead_ts);
+				$_year_ahead  = date('Y', $_date_ahead_ts);
+				$_month_ahead  = date('n', $_date_ahead_ts);
+				$_max_date_ts = mktime(0, 0, 0, $_month_ahead, $_last_day_in_month, $_year_ahead);
+
+//				_debug_array(date('Y-m-d', $_max_date_ts));
 
 				$GLOBALS['phpgw']->jqcal2->add_listener('start_date', 'date', $default_start_date, array(
 					'min_date' => time(),
-					'max_date' => strtotime( date('Y-m-') . date('t') . " +1 month" ),
+					'max_date' => $_max_date_ts,
 					));
 				self::add_javascript('bookingfrontend', 'base', 'application_new_simple.js', 'text/javascript', true);
 			}
@@ -1024,6 +1035,7 @@
 				'agegroups' => $agegroups,
 				'audience' => $audience,
 				'resource_list'	=> array('options' => $resources),
+				'direct_booking' => $direct_booking,
 				'config' => CreateObject('phpgwapi.config', 'booking')->read()
 				)
 			);
@@ -1174,7 +1186,7 @@
 								unset($event['id_string']);
 								$event['application_id'] = $application['id'];
 								$event['completed'] = '0';
-								$event['is_public'] = 1;
+								$event['is_public'] = 0;
 								$event['include_in_list'] = 0;
 								$event['reminder'] = 0;
 								$event['customer_internal'] = 0;
