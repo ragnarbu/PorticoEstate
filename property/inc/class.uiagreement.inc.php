@@ -1037,6 +1037,7 @@
 					'perm'			 => $mode, 'acl_location'	 => $this->acl_location));
 			}
 
+			$GLOBALS['phpgw_info']['flags']['menu_selection'] = 'property::agreement::pricebook::agreement';
 			$id = isset($values['id']) && $values['id'] ? $values['id'] : phpgw::get_var('id', 'int');
 
 			$config		 = CreateObject('phpgwapi.config', 'property');
@@ -1389,25 +1390,25 @@
 
 			$myColumnDefs1 = array
 				(
-				array('key'		 => 'id', 'label'		 => $table_header[0]['header'], 'sortable'	 => false,
+				array('key'		 => 'id', 'label'		 => $table_header[0]['header'], 'sortable'	 => true,
 					'resizeable' => true),
-				array('key'		 => 'num', 'label'		 => $table_header[1]['header'], 'sortable'	 => false,
+				array('key'		 => 'num', 'label'		 => $table_header[1]['header'], 'sortable'	 => true,
 					'resizeable' => true),
 				array('key'		 => 'descr', 'label'		 => $table_header[2]['header'], 'sortable'	 => false,
 					'resizeable' => true),
-				array('key'		 => 'unit_name', 'label'		 => $table_header[3]['header'], 'sortable'	 => false,
+				array('key'		 => 'unit_name', 'label'		 => $table_header[3]['header'], 'sortable'	 => true,
 					'resizeable' => true, 'formatter'	 => 'JqueryPortico.FormatterCenter'),
-				array('key'		 => 'm_cost', 'label'		 => $table_header[4]['header'], 'sortable'	 => false,
+				array('key'		 => 'm_cost', 'label'		 => $table_header[4]['header'], 'sortable'	 => true,
 					'resizeable' => true, 'formatter'	 => 'JqueryPortico.FormatterRight'),
-				array('key'		 => 'w_cost', 'label'		 => $table_header[5]['header'], 'sortable'	 => false,
+				array('key'		 => 'w_cost', 'label'		 => $table_header[5]['header'], 'sortable'	 => true,
 					'resizeable' => true, 'formatter'	 => 'JqueryPortico.FormatterRight'),
-				array('key'		 => 'total_cost', 'label'		 => $table_header[6]['header'], 'sortable'	 => false,
+				array('key'		 => 'total_cost', 'label'		 => $table_header[6]['header'], 'sortable'	 => true,
 					'resizeable' => true, 'formatter'	 => 'JqueryPortico.FormatterRight'),
-				array('key'		 => 'this_index', 'label'		 => $table_header[7]['header'], 'sortable'	 => false,
+				array('key'		 => 'this_index', 'label'		 => $table_header[7]['header'], 'sortable'	 => true,
 					'resizeable' => true),
-				array('key'		 => 'index_count', 'label'		 => $table_header[8]['header'], 'sortable'	 => false,
+				array('key'		 => 'index_count', 'label'		 => $table_header[8]['header'], 'sortable'	 => true,
 					'resizeable' => true, 'formatter'	 => 'JqueryPortico.FormatterCenter'),
-				array('key'		 => 'index_date', 'label'		 => $table_header[9]['header'], 'sortable'	 => false,
+				array('key'		 => 'index_date', 'label'		 => $table_header[9]['header'], 'sortable'	 => true,
 					'resizeable' => true),
 //                $permission_update?array('key' => 'select',	'label' =>$table_header[13]['header'], 'sortable' => false, 'resizeable' => false, 'formatter'=>FormatterCheckItems):"",
 				array('key' => 'activity_id', 'hidden' => true),
@@ -1836,7 +1837,7 @@
 				'msgbox_data'					 => $GLOBALS['phpgw']->common->msgbox($msgbox_data),
 				'edit_url'						 => $GLOBALS['phpgw']->link('/index.php', $link_data),
 				'lang_id'						 => lang('ID'),
-				'value_id'						 => $values['id'],
+				'value_id'						 => $id,
 				'value_num'						 => $values['num'],
 				'value_agreement_id'			 => $agreement_id,
 				'lang_category'					 => lang('category'),
