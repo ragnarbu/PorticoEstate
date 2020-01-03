@@ -107,6 +107,7 @@
 
 			self::add_javascript('phpgwapi', 'jquery', 'editable/jquery.jeditable.js');
 			self::add_javascript('phpgwapi', 'jquery', 'editable/jquery.dataTables.editable.js');
+			self::add_javascript('phpgwapi', 'DataTables', 'plugins/input.js');
 
 			$GLOBALS['phpgw']->css->add_external_file('phpgwapi/js/DataTables/Responsive/css/responsive.dataTables.min.css');
 			$GLOBALS['phpgw']->css->add_external_file('phpgwapi/js/DataTables/Buttons/css/buttons.dataTables.css');
@@ -387,7 +388,8 @@
 					'thousands' => json_encode(","),
 					'lengthMenu' => json_encode(lang("Show _MENU_ entries")),
 					'loadingRecords' => json_encode(lang("Loading...")),
-					'processing' => json_encode(lang("Processing...")),
+//					'processing' => json_encode(lang("Processing...")),
+					'processing' => json_encode('<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i><span class="sr-only">' . lang("Processing...") . '</span> '),
 					'search' => json_encode(lang('search')),
 					'zeroRecords' => json_encode(lang("No matching records found")),
 					'paginate' => json_encode(array(
@@ -546,20 +548,40 @@
 		 */
 		public function rich_text_editor( $targets )
 		{
-			if (!isset($GLOBALS['phpgw_info']['user']['preferences']['common']['rteditor'])
-				|| $GLOBALS['phpgw_info']['user']['preferences']['common']['rteditor'] != 'ckeditor')
+			if (empty($GLOBALS['phpgw_info']['user']['preferences']['common']['rteditor']))
 			{
 				return;
 			}
-
 			if (!is_array($targets))
 			{
 				$targets = array($targets);
 			}
-			foreach ($targets as $target)
+			switch ($GLOBALS['phpgw_info']['user']['preferences']['common']['rteditor'])
 			{
-				phpgwapi_jquery::init_ckeditor($target);
+				case 'ckeditor':
+					foreach ($targets as $target)
+					{
+//						phpgwapi_jquery::init_ckeditor($target);
+						phpgwapi_jquery::init_summernote($target);
+					}
+					break;
+				case 'summernote':
+					foreach ($targets as $target)
+					{
+						phpgwapi_jquery::init_summernote($target);
+					}
+					break;
+				case 'quill':
+					foreach ($targets as $target)
+					{
+						phpgwapi_jquery::init_quill($target);
+					}
+					break;
+
+				default:
+					break;
 			}
+
 		}
 
 		/**

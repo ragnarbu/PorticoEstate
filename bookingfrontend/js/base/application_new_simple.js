@@ -1,3 +1,4 @@
+var booking_month_horizon = 3;
 var GlobalStartTime;
 var day_default_lenght = 0;
 var dow_default_start = null;
@@ -167,6 +168,9 @@ $(document).ready(function ()
 						time_default_start = result.results[i].booking_time_default_start;
 					}
 					$('#item-description').html(result.results[i].description);
+					$('#resource_list').hide();
+
+					set_conditional_translation(result.results[i].type);
 
 				}
 				if (!day_default_lenght)
@@ -232,6 +236,19 @@ $(document).ready(function ()
 
 });
 
+function set_conditional_translation(type)
+{
+	if (type == 'Equipment')
+	{
+		$('#lang_checkin').text('Utlevering');
+		$('#lang_checkout').text('Innlevering');
+	}
+	else
+	{
+		$('#lang_checkin').text('Innsjekk');
+		$('#lang_checkout').text('Utsjekk');
+	}
+}
 function PopulatePostedDate()
 {
 	var StartTime, EndTime;
@@ -316,19 +333,18 @@ function PopulatePostedDate()
 function getFreetime()
 {
 	var checkDate = new Date();
-	var EndDate = new Date(checkDate.getFullYear(), checkDate.getMonth() + 3, 0);
+	var EndDate = new Date(checkDate.getFullYear(), checkDate.getMonth() + booking_month_horizon, 0);
 
 	var getJsonURL = phpGWLink('bookingfrontend/', {
 		menuaction: "bookingfrontend.uibooking.get_freetime",
 		building_id: urlParams['building_id'],
+		resource_id: $("#resource_id").val(),
 		start_date: formatSingleDateWithoutHours(new Date()),
 		end_date: formatSingleDateWithoutHours(EndDate),
 	}, true);
 
 	$.getJSON(getJsonURL, function (result)
 	{
-		var tempDates = [];
-
 		for (var key in result)
 		{
 			for (var i = 0; i < result[key].length; i++)
@@ -346,12 +362,12 @@ function getFreetime()
 	}).done(function ()
 	{
 		var resource_id = $("#resource_id").val();
-		console.log(availlableTimeSlots);
+//		console.log(availlableTimeSlots);
 		if (typeof (availlableTimeSlots[resource_id]) != 'undefined')
 		{
 			var TimeSlots = availlableTimeSlots[resource_id];
 			var start;
-			var allowed_dates = [-1];
+			var allowed_dates = [-1]; // block everything
 			var AllowDate;
 
 			for (var i = 0; i < TimeSlots.length; i++)
@@ -462,6 +478,13 @@ $(document).ready(function ()
 				{
 					time_default_start = resource.booking_time_default_start;
 				}
+
+				if(Number(resource.booking_month_horizon) > (booking_month_horizon +1))
+				{
+					booking_month_horizon = Number(resource.booking_month_horizon) +1;
+				}
+
+				set_conditional_translation(resource.type);
 				$('#item-description').html(resource.description);
 
 				$('#bookingStartTime').val(time_default_start);
@@ -470,6 +493,10 @@ $(document).ready(function ()
 				$('#to_').val();
 				$('#selected_period').html('<b>Velg dato</b>');
 				$('#start_date').val('');
+
+			}).done(function ()
+			{
+				$('#time_select').show();
 
 			});
 			var parameter = {
@@ -495,7 +522,6 @@ $(document).ready(function ()
 					am.termAcceptDocs.push({docName: result.data[i].name, itemLink: RemoveCharacterFromURL(result.data[i].link, 'amp;'), checkedStatus: ko.observable(checked), docId: result.data[i].id.replace(/^\D+/g, '')});
 				}
 			});
-			$('#time_select').show();
 			getFreetime();
 
 		}

@@ -1983,9 +1983,14 @@ HTML;
 					{
 						$supervisor_id = $substitute;
 					}
-					$supervisors[$supervisor_id] = array('id'		 => $supervisor_id, 'required'	 => false,
-						'default'	 => true);
-					$default_found				 = true;
+
+					$supervisors[$supervisor_id] = array(
+						'id'		 => $supervisor_id,
+						'required'	 => false,
+						'default'	 => true
+					);
+
+					$default_found	 = true;
 				}
 
 				$sodimb_role_users = execMethod('property.sodimb_role_user.read', array
@@ -2000,13 +2005,21 @@ HTML;
 				{
 					foreach ($sodimb_role_users[$ecodimb][2] as $supervisor_id => $entry)
 					{
+						if(in_array($supervisor_id, array_keys($supervisors)))
+						{
+							continue;
+						}
+
 						$substitute = $sosubstitute->get_substitute($supervisor_id);
 						if ($substitute)
 						{
 							$supervisor_id = $substitute;
 						}
-						$supervisors[$supervisor_id] = array('id'		 => $supervisor_id, 'required'	 => false,
-							'default'	 => !$default_found ? !!$entry['default_user'] : false);
+						$supervisors[$supervisor_id] = array(
+							'id'		 => $supervisor_id,
+							'required'	 => false,
+							'default'	 => !$default_found ? !!$entry['default_user'] : false
+						);
 					}
 				}
 			}
@@ -2096,15 +2109,21 @@ HTML;
 					{
 						$supervisor_id = $substitute;
 					}
-					$supervisors[$supervisor_id] = array('id'		 => $supervisor_id, 'required'	 => true,
-						'default'	 => true);
+					$supervisors[$supervisor_id] = array(
+						'id'		 => $supervisor_id,
+						'required'	 => true,
+						'default'	 => true
+					);
 
 					$prefs = $this->bocommon->create_preferences('property', $supervisor_id);
 
 					if (!empty($prefs['approval_from']) && empty($supervisors[$prefs['approval_from']]))
 					{
 						$supervisor_id				 = $prefs['approval_from'];
-						$supervisors[$supervisor_id] = array('id' => $supervisor_id, 'required' => false);
+						$supervisors[$supervisor_id] = array(
+							'id' => $supervisor_id,
+							'required' => false
+						);
 					}
 					unset($prefs);
 				}
@@ -2119,8 +2138,11 @@ HTML;
 					$supervisor_id = $invoice->get_default_dimb_role_user(2, $ecodimb);
 					if ($supervisor_id)
 					{
-						$supervisors[$supervisor_id] = array('id'		 => $supervisor_id, 'required'	 => true,
-							'default'	 => true);
+						$supervisors[$supervisor_id] = array(
+							'id'		 => $supervisor_id,
+							'required'	 => true,
+							'default'	 => true
+						);
 						$level_1_required			 = false;
 					}
 				}
@@ -2133,9 +2155,26 @@ HTML;
 					{
 						$supervisor_id = $substitute;
 					}
-					$supervisors[$supervisor_id] = array('id'		 => $supervisor_id, 'required'	 => $level_1_required,
-						'default'	 => $level_1_required);
+					$supervisors[$supervisor_id] = array(
+						'id'		 => $supervisor_id,
+						'required'	 => $level_1_required,
+						'default'	 => $level_1_required
+					);
 				}
+			}
+			else if (!empty($GLOBALS['phpgw_info']['user']['preferences']['property']['approval_from']))
+			{
+				$supervisor_id =  $GLOBALS['phpgw_info']['user']['preferences']['property']['approval_from'];
+				$substitute = $sosubstitute->get_substitute($supervisor_id);
+				if($substitute)
+				{
+					$supervisor_id = $substitute;
+				}
+				$supervisors[$supervisor_id] = array(
+					'id' => $supervisor_id,
+					'required' => false,
+					'default' => true
+				);
 			}
 
 //			if(!$check_external_register && !empty($GLOBALS['phpgw_info']['user']['preferences']['property']['approval_from'])
@@ -2201,8 +2240,11 @@ HTML;
 				$requests		 = CreateObject('property.sopending_action')->get_pending_action($action_params);
 				if ($requests)
 				{
-					$supervisors[$this->account] = array('id'		 => $this->account, 'required'	 => true,
-						'default'	 => true);
+					$supervisors[$this->account] = array(
+						'id'		 => $this->account,
+						'required'	 => true,
+						'default'	 => true
+					);
 				}
 				else
 				{
@@ -2210,12 +2252,14 @@ HTML;
 					$requests				 = CreateObject('property.sopending_action')->get_pending_action($action_params);
 					if ($requests)
 					{
-						$supervisors[$this->account] = array('id'		 => $this->account, 'required'	 => false,
-							'default'	 => true);
+						$supervisors[$this->account] = array(
+							'id'		 => $this->account,
+							'required'	 => false,
+							'default'	 => true
+						);
 					}
 				}
 			}
-
 
 			if ($supervisors)
 			{
@@ -2328,6 +2372,14 @@ HTML;
 
 		function validate_purchase_grant( $ecodimb, $budget_amount, $order_id )
 		{
+
+			$need_approval = empty($this->config->config_data['workorder_approval']) ? false : true;
+
+			if(!$need_approval)
+			{
+				return true;
+			}
+
 			if ($order_id)
 			{
 				$order_type = $this->bocommon->socommon->get_order_type($order_id);
@@ -2360,43 +2412,79 @@ HTML;
 				throw $ex;
 			}
 
-			$purchase_grant_ok = true;
+			$purchase_grant_ok = false;
 
-			foreach ($check_purchase as $purchase_grant)
+			if($check_purchase)
 			{
-				if (!$purchase_grant['is_user'] && ($purchase_grant['required'] && !$purchase_grant['approved']))
+				/**
+				 * If any of the candidates has approved
+				 */
+				if (isset($this->config->config_data['invoice_acl']) && $this->config->config_data['invoice_acl'] == 'dimb')
 				{
-					$purchase_grant_ok = false;
-					phpgwapi_cache::message_set(lang('approval from %1 is required for order %2',
-									  $GLOBALS['phpgw']->accounts->get($purchase_grant['id'])->__toString(), $order_id),
-											'error'
-					);
-				}
-				else if ($purchase_grant['is_user'] && ( $purchase_grant['required'] && !$purchase_grant['approved']))
-				{
-					$action_params = array(
-						'appname'			 => 'property',
-						'location'			 => $location,
-						'id'				 => $location_item_id,
-						'responsible'		 => '',
-						'responsible_type'	 => 'user',
-						'action'			 => 'approval',
-						'remark'			 => '',
-						'deadline'			 => ''
-					);
-
-					$_account_id = $purchase_grant['id'];//$this->account
-
-					$action_params['responsible'] = $_account_id;
-					if (!execMethod('property.sopending_action.get_pending_action', $action_params))
+					foreach ($check_purchase as $purchase_grant)
 					{
-						execMethod('property.sopending_action.set_pending_action', $action_params);
+						if ($purchase_grant['approved'])
+						{
+							$purchase_grant_ok = true;
+							break;
+						}
 					}
-					execMethod('property.sopending_action.close_pending_action', $action_params);
-					$historylog->add($history_code, $location_item_id, $GLOBALS['phpgw']->accounts->get($_account_id)->__toString() . "::{$budget_amount}");
+					unset($purchase_grant);
+				}
+				else
+				{
 					$purchase_grant_ok = true;
+
+					foreach ($check_purchase as $purchase_grant)
+					{
+						if (!$purchase_grant['is_user'] && ($purchase_grant['required'] && !$purchase_grant['approved']))
+						{
+							$purchase_grant_ok = false;
+							phpgwapi_cache::message_set(lang('approval from %1 is required for order %2',
+											  $GLOBALS['phpgw']->accounts->get($purchase_grant['id'])->__toString(), $order_id),
+													'error'
+							);
+						}
+						else if ($purchase_grant['is_user'] && ( $purchase_grant['required'] && !$purchase_grant['approved']))
+						{
+							$action_params = array(
+								'appname'			 => 'property',
+								'location'			 => $location,
+								'id'				 => $location_item_id,
+								'responsible'		 => '',
+								'responsible_type'	 => 'user',
+								'action'			 => 'approval',
+								'remark'			 => '',
+								'deadline'			 => ''
+							);
+
+							$_account_id = $purchase_grant['id'];//$this->account
+
+							$action_params['responsible'] = $_account_id;
+							if (!execMethod('property.sopending_action.get_pending_action', $action_params))
+							{
+								execMethod('property.sopending_action.set_pending_action', $action_params);
+							}
+							execMethod('property.sopending_action.close_pending_action', $action_params);
+							$historylog->add($history_code, $location_item_id, $GLOBALS['phpgw']->accounts->get($_account_id)->__toString() . "::{$budget_amount}");
+							$purchase_grant_ok = true;
+						}
+					}
 				}
 			}
+			else
+			{
+				if(empty($GLOBALS['phpgw_info']['user']['preferences']['property']['approval_from']))
+				{
+					phpgwapi_cache::message_set('Du må ha satt opp en som du rapporterer til','error');
+				}
+				else
+				{
+					phpgwapi_cache::message_set('er rettigheter til ansvarsstedet satt opp korrekt?','error');
+				}
+			}
+
+
 			return $purchase_grant_ok;
 		}
 

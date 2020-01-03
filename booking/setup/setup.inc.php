@@ -1,6 +1,6 @@
 <?php
 	$setup_info['booking']['name'] = 'booking';
-	$setup_info['booking']['version'] = '0.2.52';
+	$setup_info['booking']['version'] = '0.2.53';
 	$setup_info['booking']['app_order'] = 9;
 	$setup_info['booking']['enable'] = 1;
 	$setup_info['booking']['app_group'] = 'office';
@@ -94,6 +94,7 @@
 	/* The hooks this app includes, needed for hooks registration */
 	$setup_info['booking']['hooks'] = array
 		(
+		'settings',
 		'menu' => 'booking.menu.get_menu',
 		'activity_add' => 'booking.hook_helper.activity_add',
 		'activity_delete' => 'booking.hook_helper.activity_delete',
