@@ -152,7 +152,8 @@ $(document).ready(function ()
 		modules: 'date, file',
 		validateOnBlur: true,
 		scrollToTopOnError: false,
-		errorMessagePosition: 'inline'
+		errorMessagePosition: 'inline',
+		validateHiddenInputs: true,
 	};
 
 	setTimeout(function ()
@@ -300,6 +301,28 @@ $.formUtils.addValidator({
 });
 
 
+$.formUtils.addValidator({
+	name: 'new_note',
+	validatorFunction: function (value, $el, config, languaje, $form)
+	{
+		var element = document.getElementById('editor_error');
+		if(element)
+		{
+			element.parentNode.removeChild(element);
+		}
+		var v = true;
+		if ($('#new_note').summernote('isEmpty'))
+		{
+			$('<span id="editor_error" class="help-block form-error">').text('Angi detaljer').insertAfter($('.note-editor'));
+			v = false;
+		}
+		return v;
+	},
+	errorMessage: 'details are required',
+	errorMessageKey: ''
+});
+
+
 $(function ()
 {
 
@@ -357,12 +380,13 @@ $(window).on('load', function ()
 		var on_behalf_of_lid = ui.item.value;
 		try
 		{
-			var temp = document.getElementById("new_note").value;
-			if (temp)
-			{
-				temp = temp + "\n";
-			}
-			document.getElementById("new_note").value = temp + "Saken gjelder: " + ui.item.label;
+//			var temp = document.getElementById("new_note").value;
+//			if (temp)
+//			{
+//				temp = temp + "\n";
+//			}
+//			document.getElementById("new_note").value = temp + "Saken gjelder: " + ui.item.label;
+			$('textarea#new_note').summernote('insertText', "Saken gjelder: " + ui.item.label);
 
 			var conf = {
 				modules: 'location, date, security, file',
@@ -402,12 +426,14 @@ $(window).on('load', function ()
 		var set_user_alternative_lid = ui.item.value;
 		try
 		{
-			var temp = document.getElementById("new_note").value;
-			if (temp)
-			{
-				temp = temp + "\n";
-			}
-			document.getElementById("new_note").value = temp + "Saken sendes til: " + ui.item.label;
+//			var temp = document.getElementById("new_note").value;
+//			if (temp)
+//			{
+//				temp = temp + "\n";
+//			}
+//			document.getElementById("new_note").value = temp + "Saken sendes til: " + ui.item.label;
+//			$('textarea#new_note').summernote('reset');
+			$('textarea#new_note').summernote('insertText', "Saken sendes til: " + ui.item.label);
 		}
 		catch (err)
 		{

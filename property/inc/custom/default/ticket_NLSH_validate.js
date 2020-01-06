@@ -14,6 +14,7 @@ function show_feiltyper()
 {
 	document.getElementById('label_feiltyper').style.display = 'none';
 	document.getElementById('id_feiltyper').style.display = 'none';
+	document.getElementById('add_new_value_feiltyper').style.display = 'none';
 
 	var category_id = $("#global_category_id").val();
 
@@ -27,6 +28,7 @@ function show_feiltyper()
 			{
 				document.getElementById('label_feiltyper').style.display = 'block';
 				document.getElementById('id_feiltyper').style.display = 'block';
+				document.getElementById('add_new_value_feiltyper').style.display = 'block';
 			}
 			break;
 		default:
@@ -58,14 +60,20 @@ function validate_submit()
 		default:
 	}
 
-
 	if (error)
 	{
 		alert('Feiltype må velges før meldingen kan avsluttes');
+		var send_buttons = $('.pure-button');
+		$(send_buttons).each(function ()
+		{
+			$(this).prop('disabled', false);
+		});
+
 	}
 	else
 	{
-		document.form.submit();
+		ajax_submit_form(action);
+//		document.form.submit();
 	}
 }
 
