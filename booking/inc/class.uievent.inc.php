@@ -640,6 +640,16 @@
 				}
 				catch (Exception $e)
 				{
+					$GLOBALS['phpgw']->log->error(array(
+						'text'	 => "Email to %1 failed <br/>subject: %2 <br/>content: %3 <br/>error: %4",
+						'p1'	 => $receiver,
+						'p2'	 => $subject,
+						'p3'	 => $body,
+						'p4'	 => $e->getMessage(),
+						'line'	 => __LINE__,
+						'file'	 => __FILE__
+					));
+
 					// TODO: Inform user if something goes wrong
 				}
 			}
@@ -778,10 +788,10 @@
 
 				if (!$errors['event'] and ! $errors['resource_number'] and ! $errors['organization_number'] and ! $errors['invoice_data'] && !$errors['contact_name'] && !$errors['cost'])
 				{
-					if (( phpgw::get_var('sendtorbuilding', 'POST') || phpgw::get_var('sendtocontact', 'POST') || phpgw::get_var('sendtocollision', 'POST') ||  phpgw::get_var('sendsmstocontact', 'POST')) && phpgw::get_var('active', 'POST'))
+					if ( phpgw::get_var('sendtorbuilding', 'POST') || phpgw::get_var('sendtocontact', 'POST') || phpgw::get_var('sendtocollision', 'POST') ||  phpgw::get_var('sendsmstocontact', 'POST'))
 					{
 
-						if (phpgw::get_var('sendtocollision', 'POST') || phpgw::get_var('sendtocontact', 'POST') || phpgw::get_var('sendtorbuilding', 'POST') || phpgw::get_var('sendsmstocontact', 'POST'))
+						if ((phpgw::get_var('sendtocollision', 'POST') || phpgw::get_var('sendtocontact', 'POST') || phpgw::get_var('sendtorbuilding', 'POST') || phpgw::get_var('sendsmstocontact', 'POST')) && phpgw::get_var('active', 'POST'))
 						{
 							$maildata = $this->create_sendt_mail_notification_comment_text($event, $errors);
 
@@ -838,10 +848,11 @@
 							if (phpgw::get_var('sendtocontact', 'POST'))
 							{
 								$subject = $config->config_data['event_change_mail_subject'];
-								$body = "<p>" . $config->config_data['event_change_mail'] . "\n" . phpgw::get_var('mail','html', 'POST');
+								$body = "<p>" . $config->config_data['event_change_mail'] . "\n<br /Melding:" . phpgw::get_var('mail','html', 'POST');
 								$body .= '<br /><a href="' . $link . '">Link til ' . $config->config_data['application_mail_systemname'] . '</a></p>';
 								$this->send_mailnotification($event['contact_email'], $subject, $body);
-								$comment = $comment_text_log . '<br />Denne er sendt til ' . $event['contact_email'];
+								$comment = $comment_text_log . '<br />Denne er sendt til ' . $event['contact_email'] . ':<br />';
+								$comment .=  phpgw::get_var('mail','html', 'POST');
 								$this->add_comment($event, $comment);
 							}
 							//sms
@@ -950,11 +961,11 @@
 								}
 							}
 						}
-						if (!phpgw::get_var('active', 'POST'))
+						if (!phpgw::get_var('active', 'POST') && phpgw::get_var('sendtorbuilding', 'POST'))
 						{
 
 							$subject = $config->config_data['event_canceled_mail_subject'];
-							$body = $config->config_data['event_canceled_mail'] . "\n" . phpgw::get_var('mail','html', 'POST');
+							$body = $config->config_data['event_canceled_mail'] . "<br />\n" . phpgw::get_var('mail','html', 'POST');
 
 							if ($event['customer_organization_name'])
 							{
@@ -964,7 +975,18 @@
 							{
 								$comment_text_log = $event['contact_name'];
 							}
-							$comment_text_log = $comment_text_log . ' sitt arrangement i ' . $event['building_name'] . ' ' . date('d-m-Y H:i', strtotime($event['from_'])) . " har blitt kansellert.";
+							$res = array();
+							$resname = '';
+							foreach ($event['resources'] as $resid)
+							{
+								$res = $this->bo->so->get_resource_info($resid);
+								$resname .= $res['name'] . ', ';
+							}
+							$resources = $event['building_name'] . " (" . substr($resname, 0, -2) . ") " . pretty_timestamp($event['from_']) . " - " . pretty_timestamp($event['to_']);
+
+//							$comment_text_log = $comment_text_log . ' sitt arrangement i ' . $event['building_name'] . ' ' . date('d-m-Y H:i', strtotime($event['from_'])) . " har blitt kansellert.";
+							$comment_text_log = $comment_text_log . ' sitt arrangement har blitt kansellert:';
+							$comment_text_log .= "<br />\n" . $resources;
 
 							$body .= "<br />\n" . $comment_text_log;
 							$body = html_entity_decode($body);

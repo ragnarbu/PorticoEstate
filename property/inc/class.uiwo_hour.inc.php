@@ -1103,7 +1103,7 @@
 			$sent_ok		 = phpgw::get_var('print', 'bool');
 			$send_as_pdf	 = phpgw::get_var('send_as_pdf', 'bool');
 			$email_receipt	 = phpgw::get_var('email_receipt', 'bool');
-			
+
 			if ($_SERVER['REQUEST_METHOD'] == 'POST' && $GLOBALS['phpgw']->session->is_repost())
 			{
 				$GLOBALS['phpgw']->redirect_link('/index.php', array(
@@ -1281,8 +1281,12 @@
 				}
 			}
 
+			$documentation_url = $this->bocommon->get_documentation_url($workorder_id);
+
+
 			$email_data = array
 				(
+				'documentation_url'			 => $documentation_url,
 				'contract_name'				 => $contract_name,
 				'formatted_gab_id'			 => $formatted_gab_id,
 				'org_name'					 => isset($this->config->config_data['org_name']) ? "{$this->config->config_data['org_name']}::" : '',
@@ -1384,33 +1388,35 @@
 					}
 				}
 
-				$criteria = array
-					(
-					'appname'	 => 'property',
-					'location'	 => '.project.workorder.transfer',
-					'allrows'	 => true
-				);
-
-				$transfer_action = 'workorder'; // trigger for transfer
-
-				$custom_functions = $GLOBALS['phpgw']->custom_functions->find($criteria);
-
-				foreach ($custom_functions as $entry)
+				if($send_order)
 				{
-					// prevent path traversal
-					if (preg_match('/\.\./', $entry['file_name']))
-					{
-						continue;
-					}
+					$criteria = array
+						(
+						'appname'	 => 'property',
+						'location'	 => '.project.workorder.transfer',
+						'allrows'	 => true
+					);
 
-					$file = PHPGW_SERVER_ROOT . "/property/inc/custom/{$GLOBALS['phpgw_info']['user']['domain']}/{$entry['file_name']}";
-					if ($entry['active'] && is_file($file) && !$entry['client_side'] && !$entry['pre_commit'])
+					$transfer_action = 'workorder'; // trigger for transfer
+
+					$custom_functions = $GLOBALS['phpgw']->custom_functions->find($criteria);
+
+					foreach ($custom_functions as $entry)
 					{
-						require $file;
+						// prevent path traversal
+						if (preg_match('/\.\./', $entry['file_name']))
+						{
+							continue;
+						}
+
+						$file = PHPGW_SERVER_ROOT . "/property/inc/custom/{$GLOBALS['phpgw_info']['user']['domain']}/{$entry['file_name']}";
+						if ($entry['active'] && is_file($file) && !$entry['client_side'] && !$entry['pre_commit'])
+						{
+							require $file;
+						}
 					}
 				}
 
-				$_to						 = isset($workorder['mail_recipients'][0]) && $workorder['mail_recipients'][0] ? implode(';', $workorder['mail_recipients']) : $to_email;
 				$email_data['use_yui_table'] = false;
 
 				$this->create_html->add_file(array(PHPGW_SERVER_ROOT . '/property/templates/base/wo_hour'));
@@ -1575,6 +1581,8 @@ HTML;
 					exit;
 				}
 
+				$_to		 = isset($workorder['mail_recipients'][0]) && $workorder['mail_recipients'][0] ? implode(';', $workorder['mail_recipients']) : $to_email;
+
 				if ($GLOBALS['phpgw']->preferences->data['property']['order_email_rcpt'] == 1)
 				{
 					$bcc = $from_email;
@@ -1609,14 +1617,14 @@ HTML;
 						foreach ($attachments as & $_attachment)
 						{
 							$_attachment_log[] = $_attachment['name'];
-							
+
 							if($bofiles->is_image($_attachment['file']))
 							{
 								$resized = $GLOBALS['phpgw_info']['server']['temp_dir'] . "/resized_{$workorder_id}_" . basename($_attachment['file']);
 								$bofiles->resize_image($_attachment['file'], $resized, 800);
 								$_attachment['file'] = $resized;
 								$_attachment['resized'] = $resized;
-								
+
 							}
 						}
 						unset($_attachment);
@@ -1670,7 +1678,7 @@ HTML;
 					try
 					{
 						$rcpt = $GLOBALS['phpgw']->send->msg('email', $_to, $subject, $body, '', $cc, $bcc, $from_email, $from_name, 'html', '', $attachments, $email_receipt);
-						
+
 						foreach ($attachments as $_attachment)
 						{
 							if (!empty($_attachment['resized']))
@@ -1818,7 +1826,7 @@ HTML;
 				'id'		 => $workorder_id
 			);
 
-			//---datatable settings---------------------------------------------------			
+			//---datatable settings---------------------------------------------------
 
 			$table_view_order = array();
 			if (count($email_data['values_view_order']))
@@ -2368,7 +2376,7 @@ HTML;
 					$pdf->ezSetDy(-80);
 				}
 				$pdf->ezText($this->config->config_data['order_footer_header'], 12);
-				$pdf->ezText($this->config->config_data['order_footer'], 10);
+				$pdf->ezText(htmlspecialchars($this->config->config_data['order_footer']), 10);
 			}
 
 			if ($preview)
@@ -3739,6 +3747,7 @@ HTML;
 			);
 
 			$_to = isset($workorder['mail_recipients'][0]) && $workorder['mail_recipients'][0] ? implode(';', $workorder['mail_recipients']) : '';
+			$__to = $_to;
 //			_debug_array($_to);die();
 			$GLOBALS['phpgw']->preferences->set_account_id($workorder['user_id'], true);
 
@@ -3850,7 +3859,7 @@ HTML;
 
 			$_attachment_log = $attachment_log ? "::$attachment_log" : '';
 			$historylog		 = CreateObject('property.historylog', 'workorder');
-			$historylog->add('M', $workorder_id, "{$_to}{$_attachment_log}");
+			$historylog->add('M', $workorder_id, "{$__to}{$_attachment_log}");
 		}
 
 		function get_gab_id( $location_code )

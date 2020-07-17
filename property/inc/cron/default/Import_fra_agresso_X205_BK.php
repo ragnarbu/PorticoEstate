@@ -89,7 +89,7 @@
 						continue;
 					}
 
-					if (preg_match('/^X205/i', (string)$file))
+					if (preg_match('/(^X205|^Portico)/i', (string)$file))
 					{
 						$file_list[] = (string)"{$dirname}/{$file}";
 					}
@@ -203,7 +203,7 @@
 						_debug_array('preg_match("/xml$/i",' . $file_name . ': ' . preg_match('/xml$/i', $file_name));
 					}
 
-					if (preg_match('/^X205/i', (string)$file_name))
+					if (preg_match('/(^X205|^Portico)/i', (string)$file_name))
 					{
 						$file_remote = $file_name;
 						$file_local	 = "{$directory_local}/{$file_name}";
@@ -258,6 +258,16 @@
 
 		protected function import( $file )
 		{
+			$_file		 = basename($file);
+
+			$update_attachments = false;
+
+			if (preg_match('/^Portico/i', (string)$_file))
+			{
+				$update_attachments = true;
+			}
+
+
 			$buffer		 = array();
 			$bilagsnr	 = false;
 
@@ -431,39 +441,45 @@
 				}
 
 				$update_voucher			 = false;
-				$receive_order_performed = false;
-				$sql					 = "SELECT bilagsnr, bilagsnr_ut FROM fm_ecobilag WHERE external_voucher_id = '{$_data['KEY']}'";
+
+				$sql = "SELECT bilagsnr, overftid FROM (
+				SELECT  bilagsnr, NULL as overftid FROM fm_ecobilag WHERE external_voucher_id = '{$_data['KEY']}'
+				UNION
+				SELECT  bilagsnr, overftid FROM fm_ecobilagoverf WHERE external_voucher_id = '{$_data['KEY']}' ) AS t";
+
 				$this->db->query($sql, __LINE__, __FILE__);
-				if ($this->db->next_record())
+				if ( $this->db->next_record())
 				{
 					$this->skip_update_voucher_id	 = true;
-					$update_voucher					 = true;
 					$receive_order_performed		 = true;
-					$bilagsnr						 = $this->db->f('bilagsnr');
-					$buffer[$i]['bilagsnr']			 = $bilagsnr;
-					$this->receipt['message'][]		 = array('msg' => "Oppdatert med nye data i arbeidsregister: ordre = {$_order_id}, bilag = {$_data['KEY']}");
-				}
-
-				$sql = "SELECT bilagsnr FROM fm_ecobilagoverf WHERE external_voucher_id = '{$_data['KEY']}'";
-				$this->db->query($sql, __LINE__, __FILE__);
-				if ($this->db->next_record())
-				{
-					$this->skip_update_voucher_id	 = true;
-					$update_voucher					 = true;
-					$receive_order_performed		 = true;
-					$bilagsnr						 = $this->db->f('bilagsnr');
-
-					$buffer[$i]['bilagsnr'] = $bilagsnr;
-
-					$receipt = $this->rollback($bilagsnr);
-
-					if (isset($receipt['message']))
+					$bilagsnr					 = $this->db->f('bilagsnr');
+					$buffer[$i]['bilagsnr']		 = $bilagsnr;
+					$overftid					 = $this->db->f('$overftid');
+					if(!$update_attachments)
 					{
-						$this->receipt['message'][] = array('msg' => "Bilag rullet tilbake fra historikk : {$bilagsnr}");
+						$update_voucher					 = true;
+					}
+
+					if(!$update_attachments && $overftid)
+					{
+						$receipt = $this->rollback($bilagsnr);
+						if (isset($receipt['message']))
+						{
+							$this->receipt['message'][] = array('msg' => "Bilag rullet tilbake fra historikk : ordre = {$_order_id}, bilag = {$_data['KEY']}");
+						}
+						else
+						{
+							$this->receipt['error'][] = array('msg' => "Bilag ikke rullet tilbake fra historikk : ordre = {$_order_id}, bilag: {$_data['KEY']}, FakturaNr: {$fakturanr}");
+						}
+					}
+
+					if($update_attachments)
+					{
+						$this->receipt['message'][] = array('msg' => "Bilag oppdatert med vedlegg : ordre = {$_order_id}, bilag = {$_data['KEY']}");
 					}
 					else
 					{
-						$this->receipt['error'][] = array('msg' => "Bilag ikke rullet tilbake fra historikk : {$bilagsnr}, Skanningreferanse: {$_data['KEY']}, FakturaNr: {$fakturanr}");
+						$this->receipt['message'][]		 = array('msg' => "Oppdatert med nye data i arbeidsregister: ordre = {$_order_id}, bilag = {$_data['KEY']}");
 					}
 				}
 
@@ -527,6 +543,10 @@
 				$this->skip_import = false;
 				return false;
 			}
+			else if($update_attachments && $bilagsnr)
+			{
+				return $bilagsnr;
+			}
 			else
 			{
 				if ($update_voucher && $bilagsnr)
@@ -558,7 +578,7 @@
 
 						$order_type = $this->bocommon->socommon->get_order_type($order_id);
 
-						switch ($order_type)
+						switch ($order_type['type'])
 						{
 							case 'workorder':
 								$received	 = createObject('property.boworkorder')->receive_order((int)$order_id, $received_amount, $_data['KEY']);
@@ -718,7 +738,7 @@
 
 			if ($num > 0)
 			{
-				$this->receipt['message'][] = array('msg' => "Importert {$num} poster til bilag {$buffer[0]['bilagsnr']}, KEY: {$buffer[0]['external_voucher_id']}");
+				$this->receipt['message'][] = array('msg' => "Importert {$num} poster til ordre {$buffer[0]['pmwrkord_code']}, bilag: {$buffer[0]['external_voucher_id']}");
 				return $buffer[0]['bilagsnr'];
 			}
 			return false;

@@ -33,7 +33,6 @@
 
 		$site_url	= $GLOBALS['phpgw']->link('/home.php', array());
 		$user = $GLOBALS['phpgw']->accounts->get( $GLOBALS['phpgw_info']['user']['id'] );
-		$user_fullname	= $user->__toString();
 
 		$controller_text = lang('controller');
 		$tts_url = $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'property.uitts.index'));
@@ -45,12 +44,22 @@
 		$moveout_url = $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'rental.uimoveout.index'));
 		$moveout_text = $GLOBALS['phpgw']->translation->translate('moveout', array(), false, 'rental');
 		$logout_url	= $GLOBALS['phpgw']->link('/logout.php');
-		$logout_text	= lang('logout');
-		$var['user_fullname'] = $user_fullname;
-
 
 		$acl = & $GLOBALS['phpgw']->acl;
+		$anonymous = $acl->check('anonymous', 1, 'phpgwapi');
 
+		if($anonymous)
+		{
+			$user_fullname	= lang('home');
+			$logout_text	= lang('login');
+			$var['user_fullname'] = '';	
+		}
+		else
+		{
+			$user_fullname	= $user->__toString();
+			$logout_text	= lang('logout');
+			$var['user_fullname'] = $user_fullname;		
+		}
 
 		$landing = <<<HTML
 		<div class="mt-5 row">
@@ -217,6 +226,30 @@ HTML;
 HTML;
 		}
 
+		if($acl->check('.document.import', PHPGW_ACL_ADD, 'property'))
+		{
+			$property_documents_url = $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'property.uiimport_documents.step_1_import'));
+			$property_documents_text = $GLOBALS['phpgw']->translation->translate('import documents', array(), false, 'property');
+
+			$topmenu .= <<<HTML
+				<li class="nav-item">
+					<a href="{$property_documents_url}" class="nav-link"><i class="fa fa-home fa-fw" aria-hidden="true"></i>&nbsp;{$rental_frontend_text}</a>
+				</li>
+HTML;
+
+			$landing .= <<<HTML
+				<!-- CARD #6 -->
+					 <div class="col">
+						<div class="mb-5 card" style="width: 18rem;">
+						  <div class="text-center card-body">
+							<h5 class="mx-auto card-title">{$property_documents_text}</h5>
+							<a href="{$property_documents_url}" class="btn btn-primary">Gå til {$property_documents_text}</a>
+						  </div>
+						</div>
+					 </div>
+HTML;
+		}
+
 		if($acl->check('run', PHPGW_ACL_READ, 'helpdesk'))
 		{
 			$helpdesk_url = $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'helpdesk.uitts.index'));
@@ -237,7 +270,7 @@ HTML;
 				</li>
 HTML;
 			$landing .= <<<HTML
-				<!-- CARD #5 -->
+				<!-- CARD #7 -->
 					 <div class="col">
 						<div class="card" style="width: 18rem;">
 						  <div class="text-center card-body">

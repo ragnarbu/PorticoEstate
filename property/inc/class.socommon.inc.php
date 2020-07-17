@@ -248,8 +248,12 @@
 
 		function read_single_tenant( $id )
 		{
-			$this->db->query("SELECT * FROM fm_tenant WHERE id =$id", __LINE__, __FILE__);
-			$this->db->next_record();
+			$this->db->query("SELECT * FROM fm_tenant WHERE id = " . (int)$id, __LINE__, __FILE__);
+			
+			if(!$this->db->next_record())
+			{
+				return array();
+			}
 
 			$tenant_data = array
 				(
@@ -482,13 +486,16 @@
 		/**
 		 * 
 		 * @param int $id
-		 * @return string
+		 * @return array
 		 */
 		public function get_order_type( $id )
 		{
 			$id = (int)$id;
-			$this->db->query("SELECT type FROM fm_orders WHERE id={$id}", __LINE__, __FILE__);
+			$this->db->query("SELECT type, secret FROM fm_orders WHERE id={$id}", __LINE__, __FILE__);
 			$this->db->next_record();
-			return $this->db->f('type');
+			return array(
+				'type' => $this->db->f('type'),
+				'secret' => $this->db->f('secret')
+				);
 		}
 	}

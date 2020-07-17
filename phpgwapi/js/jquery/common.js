@@ -219,7 +219,7 @@ JqueryPortico.formatRadio = function (key, oData)
 
 JqueryPortico.showPicture = function (key, oData)
 {
-	var link = ""
+	var link = "";
 	if (oData['img_id'])
 	{
 		var img_name = oData['file_name'];
@@ -229,6 +229,21 @@ JqueryPortico.showPicture = function (key, oData)
 		link = "<a href='" + img_url + "' title='" + img_name + "' id='" + img_id + "' target='_blank'><img src='" + img_url + "&" + thumbnail_flag + "' alt='" + img_name + "' /></a>";
 	}
 	return link;
+};
+
+JqueryPortico.formatJsonArray = function (key, oData)
+{
+	var string = "";
+	if (oData[key])
+	{
+		var tags = oData[key];
+		$.each(tags, function (k, v)
+		{
+			string += v + '<br/>';
+		});
+
+	}
+	return string;
 };
 
 JqueryPortico.FormatterAmount0 = function (key, oData)
@@ -270,6 +285,15 @@ JqueryPortico.inlineTableHelper = function (container, ajax_url, columns, option
 	var editor_cols = [];
 	var allrows = options['allrows'] || false;
 	var pageLength = options['rows_per_page'] || 10;
+	var scrollY = options['scrollY'] || false;
+	var scrollX = true;//options['scrollX'] || false;
+	var fixedColumns = options['fixedColumns'] || false;
+
+	if (scrollY)
+	{
+		disablePagination = false;
+	}
+
 	data = data || {};
 	num = num || 0;
 
@@ -392,6 +416,11 @@ JqueryPortico.inlineTableHelper = function (container, ajax_url, columns, option
 //	{
 
 	var oTable = $("#" + container).dataTable({
+		scrollY: scrollY,
+		scrollX: scrollX,
+		scroller: scrollY ? true : false,
+		scrollCollapse: scrollY ? true : false,
+		fixedColumns: fixedColumns,
 		paginate: disablePagination ? false : true,
 		filter: disableFilter ? false : true,
 		info: disablePagination ? false : true,
@@ -401,7 +430,7 @@ JqueryPortico.inlineTableHelper = function (container, ajax_url, columns, option
 		responsive: responsive_def,
 		deferRender: true,
 		select: select,
-		data: data,
+ 		data: data,
 		ajax: ajax_def,
 		fnServerParams: function (aoData)
 		{
@@ -447,6 +476,14 @@ JqueryPortico.inlineTableHelper = function (container, ajax_url, columns, option
 		{
 			if (typeof (oTable) != 'undefined')
 			{
+				var api = oTable.api();
+				window.setTimeout(function ()
+				{
+					api.columns.adjust()
+						.fixedColumns().relayout();
+				}, 50);
+
+				api.buttons('.record').enable(false);
 				oTable.makeEditable({
 					sUpdateURL: editor_action,
 					fnOnEditing: function (input)
@@ -482,6 +519,7 @@ JqueryPortico.inlineTableHelper = function (container, ajax_url, columns, option
 						return;
 					}
 				});
+
 			}
 			if (typeof (addFooterDatatable) == 'function')
 			{
@@ -500,11 +538,13 @@ JqueryPortico.inlineTableHelper = function (container, ajax_url, columns, option
 		buttons: buttons_def,
 		search: initial_search
 	});
+
+
 	$("#" + container + ' tbody').on('click', 'tr', function ()
 	{
+
 		$(this).toggleClass('selected');
 		var api = oTable.api();
-//		var selectedRows = api.rows({selected: true}).count();
 		var selectedRows = api.rows('.selected').data().length;
 
 		api.buttons('.record').enable(selectedRows > 0);
@@ -757,7 +797,7 @@ JqueryPortico.lightboxlogin = function ()
 {
 	var oArgs = {lightbox: 1};
 	var strURL = phpGWLink('login.php', oArgs);
-	var width =  $(window).width() * 0.80;
+	var width = $(window).width() * 0.80;
 	TINY.box.show({
 		iframe: strURL,
 		boxid: 'frameless',
@@ -1228,7 +1268,7 @@ function createObject(object)
 				objs.push('&nbsp;');
 			}
 
-			if(element.getAttribute('type') == 'radio')
+			if (element.getAttribute('type') == 'radio')
 			{
 				element.onclick = function (e)
 				{
@@ -1249,7 +1289,7 @@ function createObject(object)
 						}
 						catch (err)
 						{
-console.log(err);
+							console.log(err);
 						}
 					}
 				};
@@ -1317,7 +1357,7 @@ function populateSelect_activityCalendar(url, container, attr)
 			var option = document.createElement('option');
 			option.text = value.name;
 
-			if(typeof(value.id) !=='undefined')
+			if (typeof (value.id) !== 'undefined')
 			{
 				option.setAttribute('value', value.id);
 			}
@@ -1810,19 +1850,26 @@ function frontendScheduleDateColumn(data, col, date)
 			name = formatScheduleShorten('Privat arr.', 9);
 		}
 		classes = "cellInfo" + " " + type;
-		
-		if(name === "closed" || name === "Stengt"){
-			classes+= " " + "calender-closed";
-		} else if (type === "allocation"){
+
+		if (name === "closed" || name === "Stengt")
+		{
+			classes += " " + "calender-closed";
+		}
+		else if (type === "allocation")
+		{
 			classes += " " + "calender-allocation";
-		} else if (type === "booking"){
+		}
+		else if (type === "booking")
+		{
 			classes += " " + "calender-booking";
-		} else if (type === "event"){
+		}
+		else if (type === "event")
+		{
 			classes += " " + "calender-event";
 		}
 
 		text = name;
-		
+
 		trFunction.push(
 		{
 			event: 'click',
@@ -1832,8 +1879,10 @@ function frontendScheduleDateColumn(data, col, date)
 				schedule.showInfo(data[k]['info_url'], resource);
 
 				// close modal on overlay click
-				setTimeout(function() {
-					document.querySelector(".ui-widget-overlay").addEventListener("click", function() {
+				setTimeout(function ()
+				{
+					document.querySelector(".ui-widget-overlay").addEventListener("click", function ()
+					{
 						document.querySelector(".ui-dialog-titlebar-close").click();
 					});
 				}, 200);
@@ -1955,7 +2004,7 @@ function rentalScheduleApplication(data, col, date)
 		else
 		{
 			text = lang['free'] || "free";
-	//		text = "free";
+			//		text = "free";
 			classes = "free";
 		}
 
@@ -2056,17 +2105,17 @@ function formatBackendScheduleDateColumn(id, name, type, conflicts)
 	conflicts = (conflicts) ? conflicts : {};
 	if (type == "booking")
 	{
-		link = phpGWLink('index.php', {menuaction:'booking.uibooking.edit', id:id});
+		link = phpGWLink('index.php', {menuaction: 'booking.uibooking.edit', id: id});
 //		link = 'index.php?menuaction=booking.uibooking.edit&id=' + id;
 	}
 	else if (type == "allocation")
 	{
-		link = phpGWLink('index.php', {menuaction:'booking.uiallocation.edit', id:id});
+		link = phpGWLink('index.php', {menuaction: 'booking.uiallocation.edit', id: id});
 //		link = 'index.php?menuaction=booking.uiallocation.edit&id=' + id;
 	}
 	else if (type == "event")
 	{
-		link = phpGWLink('index.php', {menuaction:'booking.uievent.edit', id:id});
+		link = phpGWLink('index.php', {menuaction: 'booking.uievent.edit', id: id});
 //		link = 'index.php?menuaction=booking.uievent.edit&id=' + id;
 	}
 	text = formatGenericLink(name, link);

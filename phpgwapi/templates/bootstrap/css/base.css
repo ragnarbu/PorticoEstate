@@ -354,3 +354,27 @@ button.dt-button.disabled, div.dt-button.disabled, a.dt-button.disabled
 	text-decoration: line-through;
 }
 
+
+.glider-slide img {
+	opacity: 0;
+	transform: opacity .1s ease;
+}
+.glider-slide img.loaded {
+	opacity: 1;
+}
+.wrapperForGlider {
+	width: 500px;
+	max-width: 80%;
+	margin: 0 auto;
+	margin-bottom: 50px;
+	display: inline-block;
+}
+
+.dataTables_filter label
+{
+	display: inline !important;
+}
+
+label > input[type="search"] {
+	float:right;
+}

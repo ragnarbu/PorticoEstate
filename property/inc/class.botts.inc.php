@@ -1260,10 +1260,9 @@
 				}
 
 				$fm_location_cols	 = $custom->find('property', '.location.' . $type_id, 0, '', 'ASC', 'attrib_sort', true, true);
-				$i					 = 0;
 				foreach ($fm_location_cols as $location_entry)
 				{
-					if ($location_entry['lookup_form'])
+					if ($location_entry['lookup_form'] && $location_data[$location_entry['column_name']])
 					{
 						$address_element[] = array
 							(
@@ -1271,8 +1270,23 @@
 							'value'	 => $location_data[$location_entry['column_name']]
 						);
 					}
-					$i++;
 				}
+
+				$zip_info = $solocation->get_zip_info($location_code);
+				if($zip_info)
+				{
+						$address_element[] = array
+						(
+							'text'	 => lang('zip code'),
+							'value'	 => $zip_info['zip_code']
+						);
+						$address_element[] = array
+						(
+							'text'	 => lang('city'),
+							'value'	 => $zip_info['city']
+						);
+				}
+
 			}
 			return $address_element;
 		}
@@ -1901,8 +1915,10 @@ HTML;
 			return $this->so->get_assigned_groups2($selected);
 		}
 
-		public function receive_order( $id, $received_amount, $external_voucher_id = 0 )
+		public function receive_order($order_id, $received_amount, $external_voucher_id = 0 )
 		{
+			$id	 = $this->so->get_ticket_from_order($order_id);
+
 			$transfer_action = 'receive_order'; // used as trigger within the custom function
 			$acl_location	 = $this->acl_location;
 
@@ -1980,13 +1996,10 @@ HTML;
 				if ($supervisor_id)
 				{
 					$substitute = $sosubstitute->get_substitute($supervisor_id);
-					if ($substitute)
-					{
-						$supervisor_id = $substitute;
-					}
 
 					$supervisors[$supervisor_id] = array(
 						'id'		 => $supervisor_id,
+						'substitute' => $substitute ? $substitute : null,
 						'required'	 => false,
 						'default'	 => true
 					);
@@ -2012,12 +2025,9 @@ HTML;
 						}
 
 						$substitute = $sosubstitute->get_substitute($supervisor_id);
-						if ($substitute)
-						{
-							$supervisor_id = $substitute;
-						}
 						$supervisors[$supervisor_id] = array(
 							'id'		 => $supervisor_id,
+							'substitute' => $substitute ? $substitute : null,
 							'required'	 => false,
 							'default'	 => !$default_found ? !!$entry['default_user'] : false
 						);
@@ -2087,11 +2097,11 @@ HTML;
 				{
 					$supervisor_id	 = $GLOBALS['phpgw']->accounts->name2id($supervisor_lid);
 					$substitute		 = $sosubstitute->get_substitute($supervisor_id);
-					if ($substitute)
-					{
-						$supervisor_id = $substitute;
-					}
-					$supervisors[$supervisor_id] = array('id' => $supervisor_id, 'required' => true);
+					$supervisors[$supervisor_id] = array(
+						'id' => $supervisor_id,
+						'substitute' => $substitute ? $substitute : null,
+						'required' => true
+						);
 				}
 			}
 			else if ($approval_amount_limit > 0 && $amount > $approval_amount_limit)
@@ -2106,12 +2116,9 @@ HTML;
 				if ($supervisor_id)
 				{
 					$substitute = $sosubstitute->get_substitute($supervisor_id);
-					if ($substitute)
-					{
-						$supervisor_id = $substitute;
-					}
 					$supervisors[$supervisor_id] = array(
 						'id'		 => $supervisor_id,
+						'substitute' => $substitute ? $substitute : null,
 						'required'	 => true,
 						'default'	 => true
 					);
@@ -2121,8 +2128,10 @@ HTML;
 					if (!empty($prefs['approval_from']) && empty($supervisors[$prefs['approval_from']]))
 					{
 						$supervisor_id				 = $prefs['approval_from'];
+						$substitute = $sosubstitute->get_substitute($supervisor_id);
 						$supervisors[$supervisor_id] = array(
 							'id' => $supervisor_id,
+							'substitute' => $substitute ? $substitute : null,
 							'required' => false
 						);
 					}
@@ -2140,12 +2149,10 @@ HTML;
 					if ($supervisor_id)
 					{
 						$substitute = $sosubstitute->get_substitute($supervisor_id);
-						if ($substitute)
-						{
-							$supervisor_id = $substitute;
-						}
+
 						$supervisors[$supervisor_id] = array(
 							'id'		 => $supervisor_id,
+							'substitute' => $substitute,
 							'required'	 => true,
 							'default'	 => true
 						);
@@ -2157,12 +2164,9 @@ HTML;
 				if ($supervisor_id)
 				{
 					$substitute = $sosubstitute->get_substitute($supervisor_id);
-					if ($substitute)
-					{
-						$supervisor_id = $substitute;
-					}
 					$supervisors[$supervisor_id] = array(
 						'id'		 => $supervisor_id,
+						'substitute' => $substitute,
 						'required'	 => $level_1_required,
 						'default'	 => $level_1_required
 					);
@@ -2172,12 +2176,9 @@ HTML;
 			{
 				$supervisor_id =  $GLOBALS['phpgw_info']['user']['preferences']['property']['approval_from'];
 				$substitute = $sosubstitute->get_substitute($supervisor_id);
-				if($substitute)
-				{
-					$supervisor_id = $substitute;
-				}
 				$supervisors[$supervisor_id] = array(
 					'id' => $supervisor_id,
+					'substitute' => $substitute ? $substitute : null,
 					'required' => false,
 					'default' => true
 				);
@@ -2208,15 +2209,25 @@ HTML;
 		protected function get_supervisor_approval( $supervisors, $order_id = 0, $project_id = 0, $amount = 0 )
 		{
 			$order_type = $this->bocommon->socommon->get_order_type($order_id);
+
+			$approval_level = !empty($this->config->config_data['approval_level']) ? $this->config->config_data['approval_level'] : 'order';
+
+			if($approval_level == 'project' && !$project_id && $order_id && $order_type['type'] == 'workorder')
+			{
+
+				$order_info = CreateObject('property.soworkorder')->read_single($order_id);
+				$project_id = $order_info['project_id'];
+				$amount = CreateObject('property.boworkorder')->get_accumulated_budget_amount($project_id);
+			}
 			
-			if($project_id)
+			if($approval_level == 'project' && $project_id)
 			{
 				$location			 = '.project';
 				$location_item_id	 = $project_id;
 			}
 			else if ($order_id)
 			{
-				switch ($order_type)
+				switch ($order_type['type'])
 				{
 					case 'workorder':
 						$location			 = '.project.workorder';
@@ -2284,11 +2295,17 @@ HTML;
 					{
 						$pending_action = CreateObject('property.sopending_action');
 
+						$responsible = array($supervisor_id);
+						if(!empty($info['substitute']))
+						{
+							$responsible[] = (int) $info['substitute'];
+						}
+
 						$action_params = array(
 							'appname'			 => 'property',
 							'location'			 => $location,
 							'id'				 => $location_item_id,
-							'responsible'		 => $supervisor_id,
+							'responsible'		 => $responsible,
 							'responsible_type'	 => 'user',
 							'action'			 => 'approval',
 							'deadline'			 => '',
@@ -2359,7 +2376,8 @@ HTML;
 						'requested_time' => $GLOBALS['phpgw']->common->show_date($requests[0]['action_requested'], $dateformat),
 						'approved'		 => $approved,
 						'approved_time'	 => $GLOBALS['phpgw']->common->show_date($approvals[0]['action_performed'], $dateformat),
-						'is_user'		 => $supervisor_id == $this->account ? true : false
+						'is_user'		 => $supervisor_id == $this->account ? true : false,
+						'is_substitute'	 => $info['substitute'] == $this->account ? true : false
 					);
 
 					unset($prefs);
@@ -2429,7 +2447,7 @@ HTML;
 			{
 				$order_type = $this->bocommon->socommon->get_order_type($order_id);
 
-				switch ($order_type)
+				switch ($order_type['type'])
 				{
 					case 'workorder':
 						$location			 = '.project.workorder';

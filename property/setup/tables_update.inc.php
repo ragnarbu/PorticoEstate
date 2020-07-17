@@ -10929,3 +10929,104 @@
 			return $GLOBALS['setup_info']['property']['currentver'];
 		}
 	}
+
+	/**
+	*
+	* Update property version from 0.9.17.746 to 0.9.17.747
+	* Add zip code
+	*
+	*/
+	$test[] = '0.9.17.746';
+	function property_upgrade0_9_17_746()
+	{
+		$GLOBALS['phpgw_setup']->oProc->m_odb->transaction_begin();
+
+		$db = & $GLOBALS['phpgw_setup']->oProc->m_odb;
+
+
+		$field = array
+		(
+			'column_name' => 'zip_code',
+			'input_text' => 'Zip code',
+			'statustext' => 'Zip code',
+			'datatype'		=> 'V',
+			'precision_'	=> 4,
+			'nullable'		=> 'True',
+			'custom'		=> 1
+		);
+
+		$GLOBALS['phpgw_setup']->oProc->AddColumn("fm_location1", 'zip_code', array(
+			'type' => 'varchar', 'precision' => '4', 'nullable' => True));
+		$GLOBALS['phpgw_setup']->oProc->AddColumn("fm_location1_history", 'zip_code', array(
+			'type' => 'varchar', 'precision' => '4', 'nullable' => True));
+
+		$field['location_id'] = $GLOBALS['phpgw']->locations->get_id('property', ".location.1");
+		$db->query("SELECT max(id) as id FROM phpgw_cust_attribute WHERE location_id = {$field['location_id']}");
+		$db->next_record();
+		$id = (int)$db->f('id');
+		$db->query("SELECT max(attrib_sort) as attrib_sort FROM phpgw_cust_attribute WHERE id = {$id} AND location_id = {$field['location_id']}");
+		$db->next_record();
+
+		$field['id']			= $id + 1;
+		$field['attrib_sort'] = (int)$db->f('attrib_sort') + 1;
+
+		$sql = 'INSERT INTO phpgw_cust_attribute(' . implode(',', array_keys($field)) . ') '
+			 . ' VALUES (' . $db->validate_insert($field) . ')';
+		$db->query($sql, __LINE__, __FILE__);
+
+
+		$GLOBALS['phpgw_setup']->oProc->CreateTable(
+			'fm_zip_code',  array(
+				'fd' => array(
+					'id' => array('type' => 'varchar', 'precision' => '4', 'nullable' => False),
+					'name' => array('type' => 'varchar', 'precision' => '255', 'nullable' => False)
+				),
+				'pk' => array('id'),
+				'fk' => array(),
+				'ix' => array(),
+				'uc' => array()
+			)
+		);
+
+		if($GLOBALS['phpgw_setup']->oProc->m_odb->transaction_commit())
+		{
+			$GLOBALS['setup_info']['property']['currentver'] = '0.9.17.747';
+			return $GLOBALS['setup_info']['property']['currentver'];
+		}
+	}
+
+	/**
+	 * Notes
+	 * Secret hash for order-documentation in table fm_orders
+	 * new location_id for .document.import
+	 */	$test[] = '0.9.17.747';
+	function property_upgrade0_9_17_747()
+	{
+		$GLOBALS['phpgw_setup']->oProc->m_odb->transaction_begin();
+
+		$db = & $GLOBALS['phpgw_setup']->oProc->m_odb;
+
+
+		$GLOBALS['phpgw_setup']->oProc->AddColumn("fm_orders", 'secret', array('type' => 'text', 'nullable' => true));
+		$GLOBALS['phpgw']->locations->add('.document.import', 'Document import', 'property', $allow_grant = false, $custom_tbl = false, $c_function = false);
+
+//		$db->query("SELECT id FROM fm_orders");
+//		$orders = array();
+//		while ($db->next_record())
+//		{
+//			$orders[] = $db->f('id');
+//		}
+
+//		foreach ($orders as $order_id)
+//		{
+//			$secret = bin2hex(random_bytes(16));
+//			$db->query("UPDATE fm_orders SET secret = '{$secret}' WHERE id = '{$order_id}'", __LINE__, __FILE__);
+//		}
+		$db->query("UPDATE fm_orders SET secret = id", __LINE__, __FILE__);
+
+		if($GLOBALS['phpgw_setup']->oProc->m_odb->transaction_commit())
+		{
+			$GLOBALS['setup_info']['property']['currentver'] = '0.9.17.748';
+			return $GLOBALS['setup_info']['property']['currentver'];
+		}
+	}

@@ -50,7 +50,7 @@
 				'split' => array('type' => 'int', 'precision' => '2', 'nullable' => True),
 				'remark' => array('type' => 'varchar', 'precision' => '50', 'nullable' => True),
 				'owner' => array('type' => 'varchar', 'precision' => '5', 'nullable' => True),
-				'Spredning' => array('type' => 'int', 'precision' => '4', 'nullable' => True)
+				'spredning' => array('type' => 'int', 'precision' => '4', 'nullable' => True)
 			),
 			'pk' => array('gab_id', 'location_code'),
 			'fk' => array(),
@@ -170,6 +170,16 @@
 			'ix' => array(),
 			'uc' => array('location_code')
 		),
+		'fm_zip_code' => array(
+			'fd' => array(
+				'id' => array('type' => 'varchar', 'precision' => '4', 'nullable' => False),
+				'name' => array('type' => 'varchar', 'precision' => '255', 'nullable' => False)
+			),
+			'pk' => array('id'),
+			'fk' => array(),
+			'ix' => array(),
+			'uc' => array()
+		),
 		'fm_location1_category' => array(
 			'fd' => array(
 				'id' => array('type' => 'int', 'precision' => '4', 'nullable' => False),
@@ -187,6 +197,7 @@
 				'loc1' => array('type' => 'varchar', 'precision' => '6', 'nullable' => False),
 				'loc1_name' => array('type' => 'varchar', 'precision' => '50', 'nullable' => True),
 				'part_of_town_id' => array('type' => 'int', 'precision' => '4', 'nullable' => True),
+				'zip_code' => array('type' => 'varchar', 'precision' => '4', 'nullable' => True),
 				'entry_date' => array('type' => 'int', 'precision' => 8, 'nullable' => True),
 				'category' => array('type' => 'int', 'precision' => '4', 'nullable' => True),
 				'user_id' => array('type' => 'int', 'precision' => '4', 'nullable' => True),
@@ -221,6 +232,7 @@
 				'loc1' => array('type' => 'varchar', 'precision' => '6', 'nullable' => False),
 				'loc1_name' => array('type' => 'varchar', 'precision' => '50', 'nullable' => True),
 				'part_of_town_id' => array('type' => 'int', 'precision' => '4', 'nullable' => True),
+				'zip_code' => array('type' => 'varchar', 'precision' => '4', 'nullable' => True),
 				'entry_date' => array('type' => 'int', 'precision' => 8, 'nullable' => True),
 				'category' => array('type' => 'int', 'precision' => '4', 'nullable' => True),
 				'user_id' => array('type' => 'int', 'precision' => '4', 'nullable' => True),
@@ -2532,7 +2544,8 @@
 		'fm_orders' => array(
 			'fd' => array(
 				'id' => array('type' => 'int', 'precision' => 4, 'nullable' => False, 'default' => '0'),
-				'type' => array('type' => 'varchar', 'precision' => 50, 'nullable' => False)
+				'type' => array('type' => 'varchar', 'precision' => 50, 'nullable' => False),
+				'secret' => array('type' => 'text', 'nullable' => true),
 			),
 			'pk' => array('id'),
 			'fk' => array(),

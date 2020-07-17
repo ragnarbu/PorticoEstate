@@ -543,6 +543,12 @@
 						'url'	 => $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'property.uigeneric.index',
 							'type'		 => 'street'))
 					),
+					'zip_code'	 => array
+						(
+						'text'	 => lang('zip code'),
+						'url'	 => $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'property.uigeneric.index',
+							'type'		 => 'zip_code'))
+					),
 					'location'	 => array
 						(
 						'url'		 => $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'property.uiadmin_location.index')),
@@ -615,7 +621,7 @@
 					),
 					'import_components'			 => array
 						(
-						'text'	 => lang('import components'),
+						'text'	 => lang('import components') . ' (TIDA)',
 						'url'	 => $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'property.uiimport_components.index'))
 					),
 					'entity'					 => array
@@ -1395,12 +1401,12 @@
 			{
 				$laws_url								 = $GLOBALS['phpgw']->link('/redirect.php', array('go' => urlencode('http://www.regelhjelp.no/')));
 				$menus['navigation']['documentation']	 = array
-					(
+				(
 					'url'		 => $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'property.uidocument.index')),
 					'text'		 => lang('Documentation'),
 					'image'		 => array('property', 'documentation'),
 					'children'	 => array
-						(
+					(
 						'generic'		 => array(
 							'url'	 => $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'property.uigeneric_document.index')),
 							'text'	 => lang('generic document')
@@ -1418,6 +1424,16 @@
 						)
 					)
 				);
+
+				if ($acl->check('.document.import', PHPGW_ACL_PRIVATE, 'property'))//acl_manage
+				{
+						$menus['navigation']['documentation']['children']['import_documents']	 = array
+							(
+							'text'	 => lang('import documents'),
+							'url'	 => $GLOBALS['phpgw']->link('/index.php', array('menuaction' => 'property.uiimport_documents.index'))
+						);
+				}
+
 				if (is_array($entity_list) && count($entity_list))
 				{
 					foreach ($entity_list as $entry)

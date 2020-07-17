@@ -11,7 +11,7 @@
 	 * @version $Id$
 	*/
 	$setup_info['property']['name']			= 'property';
-	$setup_info['property']['version']		= '0.9.17.746';
+	$setup_info['property']['version']		= '0.9.17.748';
 	$setup_info['property']['app_order']	= 8;
 	$setup_info['property']['enable']		= 1;
 	$setup_info['property']['app_group']	= 'office';
@@ -77,6 +77,7 @@
 		'fm_vendor',
 		'fm_vendor_category',
 		'fm_locations',
+		'fm_zip_code',
 		'fm_location1_category',
 		'fm_location1',
 		'fm_location1_history',

@@ -863,7 +863,13 @@ HTML;
 				unset($_GET['sessionid']);
 				unset($_GET[session_name()]);
 				unset($_GET['kp3']);
-				$GLOBALS['phpgw']->session->phpgw_setcookie('redirect', json_encode($_GET),$cookietime= time()+60);
+				
+				$cookietime = time() + 60;
+
+				$GLOBALS['phpgw']->session->phpgw_setcookie('redirect', json_encode($_GET),$cookietime);
+				$GLOBALS['phpgw']->session->phpgw_setcookie('test_cookie_1', 'testverdi_1',$cookietime);
+				$GLOBALS['phpgw']->session->phpgw_setcookie('test_cookie_2', 'testverdi_2',$cookietime);
+				$GLOBALS['phpgw']->session->phpgw_setcookie('test_cookie_3', 'testverdi_3',$cookietime);
 			}
 
 			if(phpgw::get_var('phpgw_return_as', 'string') == 'json')
@@ -885,8 +891,9 @@ HTML;
 		}
 
 		$redirect = json_decode(phpgw::get_var('redirect','raw', 'COOKIE'), true);
-		if ( is_array($redirect) && count($redirect) )
+		if ( is_array($redirect) && count($redirect) && empty($_SESSION['skip_redirect_on_login']))
 		{
+
 			foreach($redirect as $key => $value)
 			{
 				$redirect_data[$key] = phpgw::clean_value($value);
@@ -899,7 +906,13 @@ HTML;
 				$redirect_data['kp3'] = phpgw::get_var('kp3', 'string', 'GET');
 			}
 
-			$GLOBALS['phpgw']->session->phpgw_setcookie('redirect', false, 0);
+			$GLOBALS['phpgw']->session->phpgw_setcookie('redirect', '', time()-60); // expired
+
+			/**
+			 * Hack to deal with problem with update cookie for sso combined with certain reverse-proxy implementation
+			 */
+			$_SESSION['skip_redirect_on_login'] = true;
+
 			$GLOBALS['phpgw']->redirect_link('/index.php', $redirect_data);
 			unset($redirect);
 			unset($redirect_data);

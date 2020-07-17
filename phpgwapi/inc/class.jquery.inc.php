@@ -58,16 +58,15 @@
 				phpgwapi_cache::message_set($message, 'error');
 
 				$_jquery_core = 'jquery-1.11.3'; // In case we need IE 6–8 support.
-	//			$_jquery_migrate = 'jquery-migrate-1.4.1.min';
 			}
 			else
 			{
-				$_jquery_core = 'jquery-3.4.1';
-	//			$_jquery_migrate = 'jquery-migrate-3.0.0.min';
+//				$_jquery_core = 'jquery-3.4.1';
+				$_jquery_core = 'jquery-3.5.1';
 			}
 
-			$_jquery_ui = 'jquery-ui-1.12.1';
-			$_type = '.min'; // save some download
+			$_jquery_ui	 = 'jquery-ui-1.12.1';
+			$_type		 = '.min'; // save some download
 
 			if ($GLOBALS['phpgw_info']['flags']['currentapp'] == 'bookingfrontend')
 			{
@@ -103,7 +102,7 @@
 						"js/{$_jquery_core}{$_type}",
 						'datetimepicker' => array(
 							"js/jquery.datetimepicker.full{$_type}",
-		//					"i18n/DateTimePicker-i18n"
+						//					"i18n/DateTimePicker-i18n"
 						)
 					);
 					$GLOBALS['phpgw']->css->add_external_file("phpgwapi/js/datetimepicker/css/jquery.datetimepicker.min.css");
@@ -196,7 +195,7 @@
 						"js/{$_jquery_core}{$_type}",
 						'contextMenu' => array("jquery.contextMenu{$_type}")
 					);
-						$GLOBALS['phpgw']->css->add_external_file("phpgwapi/js/contextMenu/jquery.contextMenu.min.css");
+					$GLOBALS['phpgw']->css->add_external_file("phpgwapi/js/contextMenu/jquery.contextMenu.min.css");
 					break;
 
 				case 'chart':
@@ -238,12 +237,12 @@
 						(
 						"js/{$_jquery_core}{$_type}",
 						"js/{$_jquery_ui}{$_type}",
-	//					"file-upload/js/tmpl{$_type}",
+						//					"file-upload/js/tmpl{$_type}",
 						"file-upload/js/jquery.fileupload",
 						"file-upload/js/jquery.fileupload-process",
 						"file-upload/js/jquery.fileupload-validate",
-	//					"file-upload/js/jquery.fileupload-ui",
-	//					"file-upload/js/jquery.fileupload-jquery-ui",
+						//					"file-upload/js/jquery.fileupload-ui",
+						//					"file-upload/js/jquery.fileupload-jquery-ui",
 					);
 					$GLOBALS['phpgw']->css->add_external_file("phpgwapi/js/jquery/file-upload/css/jquery.fileupload.css");
 					$GLOBALS['phpgw']->css->add_external_file("phpgwapi/js/jquery/file-upload/css/jquery.fileupload-ui.css");
@@ -257,12 +256,12 @@
 						'bootstrap-multiselect' => array("js/bootstrap-multiselect")
 					);
 
-					if($GLOBALS['phpgw_info']['user']['preferences']['common']['template_set'] != 'bootstrap' )
+					if ($GLOBALS['phpgw_info']['user']['preferences']['common']['template_set'] != 'bootstrap')
 					{
 						unset($load['bootstrap-multiselect']);//to be inserted last
-						$load['popper'] = array("popper{$_type}");
-						$load['bootstrap'] = array("js/bootstrap{$_type}");
-						$load['bootstrap-multiselect'] = array("js/bootstrap-multiselect");
+						$load['popper']					 = array("popper{$_type}");
+						$load['bootstrap']				 = array("js/bootstrap{$_type}");
+						$load['bootstrap-multiselect']	 = array("js/bootstrap-multiselect");
 
 						$GLOBALS['phpgw']->css->add_external_file("phpgwapi/js/bootstrap/css/bootstrap.min.css");
 					}
@@ -277,7 +276,7 @@
 					);
 
 					$GLOBALS['phpgw']->css->add_external_file("phpgwapi/js/select2/css/select2{$_type}.css");
-					if($GLOBALS['phpgw_info']['user']['preferences']['common']['template_set'] == 'bootstrap' )
+					if ($GLOBALS['phpgw_info']['user']['preferences']['common']['template_set'] == 'bootstrap')
 					{
 //						$GLOBALS['phpgw']->css->add_external_file("phpgwapi/js/select2/css/select2-bootstrap4{$_type}.css");
 					}
@@ -285,8 +284,8 @@
 					break;
 				case 'glider':
 					$load = array
-					(
-						'glider' => array("glider{$_type}")
+						(
+						'glider' => array("glider{$_type}", 'glider_init')
 					);
 					$GLOBALS['phpgw']->css->add_external_file("phpgwapi/js/glider/glider{$_type}.css");
 					break;
@@ -322,7 +321,7 @@
 					}
 				}
 			}
-			if($migration_test)
+			if ($migration_test)
 			{
 				//_debug_array($_jquery_migrate);
 				$GLOBALS['phpgw']->js->validate_file('jquery', "js/$_jquery_migrate");
@@ -341,20 +340,20 @@
 
 			if ($errorMessagePosition_id)
 			{
-				$errorMessagePosition = "$('#{$errorMessagePosition_id}')";
-				$scrollToTopOnError = 'false';
+				$errorMessagePosition	 = "$('#{$errorMessagePosition_id}')";
+				$scrollToTopOnError		 = 'false';
 			}
 			else
 			{
-				$errorMessagePosition = "'top'";
-				$scrollToTopOnError = 'true';
+				$errorMessagePosition	 = "'top'";
+				$scrollToTopOnError		 = 'true';
 			}
 
 			switch ($GLOBALS['phpgw_info']['user']['preferences']['common']['lang'])
 			{
 				case 'no':
 				case 'nn':
-					$lang = 'no';
+					$lang	 = 'no';
 					break;
 				case 'fr':
 				case 'de':
@@ -362,10 +361,10 @@
 				case 'sv':
 				case 'en':
 				case 'pt':
-					$lang = $GLOBALS['phpgw_info']['user']['preferences']['common']['lang'];
+					$lang	 = $GLOBALS['phpgw_info']['user']['preferences']['common']['lang'];
 					break;
 				default:
-					$lang = 'en';
+					$lang	 = 'en';
 					break;
 			}
 
@@ -386,7 +385,7 @@
 			});
 JS;
 			$GLOBALS['phpgw']->js->add_code('', $js);
-			$times_loaded ++;
+			$times_loaded++;
 		}
 
 		/**
@@ -400,18 +399,18 @@ JS;
 		public static function tabview_generate( $tabs, $selection, $tab_set = 'tab-content' )
 		{
 			self::load_widget('tabview');
-			$output = <<<HTML
+			$output		 = <<<HTML
 					<ul>
 HTML;
-			$disabled = array();
-			$tab_map = array();
-			$i = 0;
+			$disabled	 = array();
+			$tab_map	 = array();
+			$i			 = 0;
 			foreach ($tabs as $id => $tab)
 			{
 				$tab_map[$id] = $i;
 
-				$label = $tab['label'];
-				$_function = '';
+				$label		 = $tab['label'];
+				$_function	 = '';
 				if (isset($tab['function']))
 				{
 					$_function = " onclick=\"javascript: {$tab['function']};\"";
@@ -426,7 +425,7 @@ HTML;
 
 				if ($tab['link'] && !preg_match('/(^#)/i', $tab['link']))
 				{
-					$_function = " onclick=\"javascript: window.location = '{$tab['link']}';\"";
+					$_function	 = " onclick=\"javascript: window.location = '{$tab['link']}';\"";
 					$tab['link'] = "#{$id}";
 				}
 
@@ -438,14 +437,14 @@ HTML;
 				$i++;
 			}
 
-			$selected = array_key_exists($selection, $tab_map) ? (int)$tab_map[$selection] : 0;
+			$selected = array_key_exists($selection, $tab_map) ? (int) $tab_map[$selection] : 0;
 
 			$disabled_js = '[' . implode(',', $disabled) . ']';
 
-			$output .= <<<HTML
+			$output	 .= <<<HTML
 					</ul>
 HTML;
-			$js = <<<JS
+			$js		 = <<<JS
 		$(document).ready(function ()
 		{
 			JqueryPortico.render_tabs();
@@ -469,17 +468,28 @@ HTML;
 							try
 							{
 								set_tab(active_tab);
+
 							}
 							catch (err)
 							{
-								//nothing
+								console.log(err);
+							}
+							try
+							{
+								$($.fn.dataTable.tables(true)).DataTable().draw();
+							}
+							catch (err)
+							{
+								console.log(err);
 							}
 						}
 					}
 
 				});
-				$('#{$tab_set}').responsiveTabs('activate', {$selected});
-
+				if($selected)
+				{
+					$('#{$tab_set}').responsiveTabs('activate', {$selected});
+				}
 			};
 JS;
 			$GLOBALS['phpgw']->js->add_code('', $js);
@@ -533,7 +543,7 @@ JS;
 		{
 			self::load_widget('core');
 
-			switch($GLOBALS['phpgw_info']['user']['preferences']['common']['template_set'])
+			switch ($GLOBALS['phpgw_info']['user']['preferences']['common']['template_set'])
 			{
 				case 'bootstrap':
 					$GLOBALS['phpgw']->js->validate_file('summernote', 'dist/summernote-bs4');
@@ -555,10 +565,10 @@ JS;
 			{
 				case 'nn':
 				case 'no':
-					$lang = 'nb-NO';
+					$lang	 = 'nb-NO';
 					break;
 				default:
-					$lang = 'nb-NO';
+					$lang	 = 'nb-NO';
 					break;
 			}
 
@@ -577,13 +587,12 @@ JS;
 			    }
 		     },
 ";
-
 			}
 
 			$lang_placeholder = lang('write here...');
 
 			$js = '';
-			if(!$init)
+			if (!$init)
 			{
 				$js = <<<JS
 
@@ -600,7 +609,7 @@ JS;
 JS;
 			}
 
-			$js .= <<<JS
+			$js		 .= <<<JS
 
 
 		$( document ).ready( function() {
@@ -615,8 +624,7 @@ JS;
 		});
 JS;
 			$GLOBALS['phpgw']->js->add_code('', $js);
-			$init = true;
-
+			$init	 = true;
 		}
 
 		public static function init_quill( $target )
@@ -624,7 +632,6 @@ JS;
 			/**
 			 * https://github.com/tangien/quilljs-textarea
 			 */
-
 			self::load_widget('core');
 			$GLOBALS['phpgw']->js->validate_file('quill', 'quill.min');
 			$GLOBALS['phpgw']->js->validate_file('quill', 'quill-textarea');
@@ -639,7 +646,7 @@ JS;
 			static $init = false;
 
 			$js = '';
-			if(!$init)
+			if (!$init)
 			{
 				$js = <<<JS
 			var quill = {};
@@ -664,7 +671,6 @@ JS;
 			];
 
 JS;
-
 			}
 
 
